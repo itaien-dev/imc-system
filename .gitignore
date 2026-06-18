@@ -1,0 +1,6 @@
+node_modules/
+.env
+.env.local
+*.log
+dist/
+backend/src/db/migrations/*.js.bak
