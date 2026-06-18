@@ -7,12 +7,43 @@ const router = express.Router();
 
 router.get('/', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const { page, pageSize } = req.query;
+    const { search, track, page, pageSize } = req.query;
     const result = await workshopsService.list({
+      search,
+      track,
       page: page ? Number(page) : 1,
       pageSize: pageSize ? Number(pageSize) : 20,
     });
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+const createWorkshopSchema = z.object({
+  workshop_number: z.number().int().positive(),
+  cycle_number: z.number().int().positive(),
+  track: z.enum(['adults', 'youth', 'general']),
+  start_date: z.string().min(1),
+  end_date: z.string().min(1),
+  publish_start_date: z.string().min(1),
+  publish_end_date: z.string().min(1),
+  feedback_date: z.string().optional().nullable(),
+  email: z.string().email().optional().nullable().or(z.literal('')),
+  notes: z.string().optional().nullable(),
+});
+
+router.post('/', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const data = createWorkshopSchema.parse(req.body);
+    if (new Date(data.end_date) < new Date(data.start_date)) {
+      return res.status(400).json({ error: 'תאריך הסיום חייב להיות אחרי תאריך ההתחלה' });
+    }
+    if (new Date(data.publish_end_date) < new Date(data.publish_start_date)) {
+      return res.status(400).json({ error: 'תאריך תום הפרסום חייב להיות אחרי תאריך תחילת הפרסום' });
+    }
+    const workshop = await workshopsService.create(data);
+    res.status(201).json(workshop);
   } catch (err) {
     next(err);
   }

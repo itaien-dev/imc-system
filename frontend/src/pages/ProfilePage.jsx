@@ -2,12 +2,18 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as usersApi from '../api/users';
 import StatusBadge from '../components/StatusBadge';
+import WorkshopHistoryTable from '../components/WorkshopHistoryTable';
+import { STAFF_ROLES } from '../components/staffRoles';
 
 const EDITABLE_FIELDS = ['full_name', 'national_id', 'birth_date', 'phone', 'email', 'address', 'gender'];
 
 export default function ProfilePage() {
   const queryClient = useQueryClient();
   const { data: user, isLoading } = useQuery({ queryKey: ['me'], queryFn: usersApi.getMe });
+  const { data: history, isLoading: loadingHistory } = useQuery({
+    queryKey: ['my-history'],
+    queryFn: usersApi.getMyWorkshopHistory,
+  });
   const [form, setForm] = useState(null);
   const [savedMessage, setSavedMessage] = useState('');
 
@@ -63,6 +69,7 @@ export default function ProfilePage() {
       <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, padding: 20 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <Field label="שם" value={current.full_name} onChange={(v) => handleChange('full_name', v)} />
+          <Field label="תעודת זהות" value={current.national_id} onChange={(v) => handleChange('national_id', v)} />
           <Field
             label="תאריך לידה"
             type="date"
@@ -130,6 +137,31 @@ export default function ProfilePage() {
           </p>
         </div>
         <StatusBadge value={user.membership_status} />
+      </div>
+
+      <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, padding: 20, marginTop: 16 }}>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>סדנאות בהן הייתי אסיסטנט</h3>
+        {loadingHistory ? (
+          <p style={{ fontSize: 13, color: '#888' }}>טוען...</p>
+        ) : (
+          <WorkshopHistoryTable
+            rows={history?.filter((h) => h.role === 'assistant') ?? []}
+            emptyText="לא הייתי אסיסטנט בשום סדנה"
+          />
+        )}
+      </div>
+
+      <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, padding: 20, marginTop: 16 }}>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>תפקידי צוות (רכז / DJ / מנחה / מתרגם / מלווה)</h3>
+        {loadingHistory ? (
+          <p style={{ fontSize: 13, color: '#888' }}>טוען...</p>
+        ) : (
+          <WorkshopHistoryTable
+            rows={history?.filter((h) => STAFF_ROLES.includes(h.role)) ?? []}
+            emptyText="לא משויך לתפקיד צוות בשום סדנה"
+            showRole
+          />
+        )}
       </div>
     </div>
   );

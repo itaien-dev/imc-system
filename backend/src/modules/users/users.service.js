@@ -20,8 +20,6 @@ const PUBLIC_FIELDS = [
   'role',
 ];
 
-// Fields a regular (non-admin) member is allowed to update on their own profile.
-// created_at, membership_expiry_date, notes, role are intentionally excluded — admin only.
 const SELF_EDITABLE_FIELDS = ['full_name', 'national_id', 'birth_date', 'phone', 'email', 'address', 'gender'];
 
 async function getById(id) {
@@ -33,6 +31,14 @@ async function getById(id) {
 async function attachComputedFields(user) {
   const computedMap = await getUserComputedFieldsBulk([user.id]);
   const computed = computedMap.get(user.id) || { assist_count: 0, student_workshop: null, last_workshop: null };
+
+  // Fetch recruiter info via user_recruitments
+  const recruiterRow = await db('user_recruitments')
+    .join('users as r', 'r.id', 'user_recruitments.recruiter_id')
+    .select('r.id as recruiter_id', 'r.full_name as recruiter_name', 'r.email as recruiter_email')
+    .where('user_recruitments.recruit_id', user.id)
+    .first();
+
   return {
     ...user,
     age: computeAge(user.birth_date),
@@ -43,8 +49,23 @@ async function attachComputedFields(user) {
     assist_count: computed.assist_count,
     student_workshop: computed.student_workshop,
     last_workshop: computed.last_workshop,
+    recruiter_id:    recruiterRow?.recruiter_id    ?? null,
+    recruiter_name:  recruiterRow?.recruiter_name  ?? null,
+    recruiter_email: recruiterRow?.recruiter_email ?? null,
   };
 }
+
+const MEMBERSHIP_STATUS_SQL = `
+  CASE
+    WHEN users.membership_expiry_date IS NOT NULL AND users.membership_expiry_date >= CURRENT_DATE THEN 'כן'
+    WHEN (
+      SELECT COUNT(*) FROM user_workshop_links
+      WHERE user_workshop_links.user_id = users.id AND user_workshop_links.role = 'assistant'
+    ) >= 3 THEN 'זכאי'
+    WHEN users.membership_expiry_date IS NOT NULL AND users.membership_expiry_date < CURRENT_DATE THEN 'פג'
+    ELSE 'לא'
+  END
+`;
 
 async function list({ search, status, page = 1, pageSize = 20 }) {
   let query = db('users').select(PUBLIC_FIELDS);
@@ -55,6 +76,10 @@ async function list({ search, status, page = 1, pageSize = 20 }) {
         .orWhereILike('phone', `%${search}%`)
         .orWhereILike('email', `%${search}%`);
     });
+  }
+
+  if (status) {
+    query = query.whereRaw(`(${MEMBERSHIP_STATUS_SQL}) = ?`, [status]);
   }
 
   const countQuery = query.clone();
@@ -68,7 +93,7 @@ async function list({ search, status, page = 1, pageSize = 20 }) {
   const userIds = rows.map((r) => r.id);
   const computedMap = await getUserComputedFieldsBulk(userIds);
 
-  let withComputed = rows.map((user) => {
+  const withComputed = rows.map((user) => {
     const computed = computedMap.get(user.id) || { assist_count: 0, student_workshop: null, last_workshop: null };
     return {
       ...user,
@@ -83,11 +108,6 @@ async function list({ search, status, page = 1, pageSize = 20 }) {
     };
   });
 
-  // Status filter is applied after computing membership_status, since it's derived, not a stored column.
-  if (status) {
-    withComputed = withComputed.filter((u) => u.membership_status === status);
-  }
-
   return { rows: withComputed, total: Number(count), page, pageSize };
 }
 
@@ -97,7 +117,6 @@ async function updateSelf(userId, patch) {
     if (key in patch) filteredPatch[key] = patch[key];
   }
   const blockedFields = Object.keys(patch).filter((k) => !SELF_EDITABLE_FIELDS.includes(k));
-
   if (Object.keys(filteredPatch).length > 0) {
     await db('users').where('id', userId).update(filteredPatch);
   }
@@ -113,34 +132,36 @@ async function updateAsAdmin(userId, patch) {
   if (Object.keys(filteredPatch).length > 0) {
     await db('users').where('id', userId).update(filteredPatch);
   }
+
+  // Update recruiter link if recruiter_email provided
+  if ('recruiter_email' in patch) {
+    // Remove existing recruiter link
+    await db('user_recruitments').where('recruit_id', userId).delete();
+
+    if (patch.recruiter_email) {
+      const recruiter = await db('users')
+        .where('email', patch.recruiter_email.toLowerCase().trim())
+        .first();
+      if (recruiter) {
+        await db('user_recruitments').insert({
+          recruiter_id: recruiter.id,
+          recruit_id: userId,
+        });
+      }
+    }
+  }
+
   return getById(userId);
 }
 
 async function exportToCsv({ search, status }) {
   const { rows } = await list({ search, status, page: 1, pageSize: 100000 });
-  const headers = [
-    'שם',
-    'חבר עמותה',
-    'טלפון',
-    'דוא"ל',
-    'סדנת סטודנט',
-    'כמות סדנאות',
-    'סדנה אחרונה',
-    'גיל',
-  ];
+  const headers = ['שם', 'חבר עמותה', 'טלפון', 'דוא"ל', 'סדנת סטודנט', 'כמות סדנאות', 'סדנה אחרונה', 'גיל'];
   const lines = [headers.join(',')];
   for (const u of rows) {
     lines.push(
-      [
-        u.full_name,
-        u.membership_status,
-        u.phone || '',
-        u.email,
-        u.student_workshop ?? '',
-        u.assist_count,
-        u.last_workshop ?? '',
-        u.age ?? '',
-      ]
+      [u.full_name, u.membership_status, u.phone || '', u.email,
+       u.student_workshop ?? '', u.assist_count, u.last_workshop ?? '', u.age ?? '']
         .map((v) => `"${String(v).replace(/"/g, '""')}"`)
         .join(',')
     );
@@ -148,4 +169,67 @@ async function exportToCsv({ search, status }) {
   return lines.join('\n');
 }
 
-module.exports = { getById, list, updateSelf, updateAsAdmin, exportToCsv };
+async function searchLite(query) {
+  if (!query || query.trim().length < 2) return [];
+  const rows = await db('users')
+    .select('id', 'full_name', 'email', 'phone')
+    .where((qb) => {
+      qb.whereILike('full_name', `%${query}%`).orWhereILike('email', `%${query}%`);
+    })
+    .orderBy('full_name')
+    .limit(15);
+
+  const userIds = rows.map((r) => r.id);
+  const studentLinks = userIds.length
+    ? await db('user_workshop_links')
+        .select('user_id', 'workshop_id')
+        .where('role', 'student')
+        .whereIn('user_id', userIds)
+    : [];
+  const studentLinkMap = new Map(studentLinks.map((l) => [l.user_id, l.workshop_id]));
+  return rows.map((r) => ({
+    ...r,
+    has_student_link: studentLinkMap.has(r.id),
+    student_workshop_id: studentLinkMap.get(r.id) ?? null,
+  }));
+}
+
+async function getWorkshopHistory(userId) {
+  const rows = await db('user_workshop_links')
+    .join('workshops', 'workshops.id', 'user_workshop_links.workshop_id')
+    .select(
+      'user_workshop_links.id as link_id',
+      'user_workshop_links.role',
+      'user_workshop_links.registered_at',
+      'user_workshop_links.attended',
+      'workshops.id as workshop_id',
+      'workshops.workshop_number',
+      'workshops.track',
+      'workshops.start_date',
+      'workshops.end_date',
+      'workshops.cycle_number'
+    )
+    .where('user_workshop_links.user_id', userId)
+    .orderBy('workshops.start_date', 'desc');
+  return rows;
+}
+
+async function create(payload) {
+  const [user] = await db('users')
+    .insert({
+      full_name: payload.full_name,
+      national_id: payload.national_id || null,
+      birth_date: payload.birth_date || null,
+      phone: payload.phone || null,
+      email: payload.email,
+      address: payload.address || null,
+      gender: payload.gender || null,
+      membership_expiry_date: payload.membership_expiry_date || null,
+      notes: payload.notes || null,
+      role: payload.role || 'member',
+    })
+    .returning(PUBLIC_FIELDS);
+  return attachComputedFields(user);
+}
+
+module.exports = { getById, list, create, updateSelf, updateAsAdmin, exportToCsv, searchLite, getWorkshopHistory };

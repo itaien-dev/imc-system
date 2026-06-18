@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import * as workshopsApi from '../api/workshops';
@@ -5,11 +6,58 @@ import * as workshopsApi from '../api/workshops';
 const TRACK_LABELS = { adults: 'בוגרים', youth: 'נוער', general: 'כללי' };
 
 export default function WorkshopsGridPage() {
-  const { data, isLoading } = useQuery({ queryKey: ['workshops'], queryFn: () => workshopsApi.listWorkshops() });
+  const [search, setSearch] = useState('');
+  const [track, setTrack] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['workshops', search, track, page, pageSize],
+    queryFn: () => workshopsApi.listWorkshops({ search, track, page, pageSize }),
+  });
+
+  const total = data?.total || 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <div>
-      <h2 style={{ marginBottom: 16 }}>סדנאות</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h2 style={{ margin: 0 }}>
+          סדנאות{' '}
+          <span style={{ fontSize: 13, color: '#888', background: '#f1f1f1', padding: '2px 8px', borderRadius: 6 }}>
+            {total}
+          </span>
+        </h2>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="text"
+            placeholder="חיפוש לפי מספר סדנה"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            style={{ width: 200, padding: 8, direction: 'rtl' }}
+          />
+          <select
+            value={track}
+            onChange={(e) => {
+              setTrack(e.target.value);
+              setPage(1);
+            }}
+            style={{ padding: 8, direction: 'rtl' }}
+          >
+            <option value="">כל השיוכים</option>
+            <option value="adults">בוגרים</option>
+            <option value="youth">נוער</option>
+            <option value="general">כללי</option>
+          </select>
+          <Link to="/admin/workshops/new">
+            <button style={{ fontWeight: 500 }}>+ הוספת סדנה</button>
+          </Link>
+        </div>
+      </div>
+
       {isLoading ? (
         <p>טוען...</p>
       ) : (
@@ -36,10 +84,51 @@ export default function WorkshopsGridPage() {
                   <Td>{w.cycle_number}</Td>
                 </tr>
               ))}
+              {data?.rows.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ padding: 16, textAlign: 'center', color: '#999' }}>
+                    לא נמצאו סדנאות
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, fontSize: 13, color: '#666' }}>
+        <span>
+          {total > 0 ? `מציג ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} מתוך ${total}` : ''}
+        </span>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            שורות בעמוד:
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              style={{ padding: '4px 6px', direction: 'rtl' }}
+            >
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </label>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              הקודם
+            </button>
+            <span>
+              עמוד {page} מתוך {totalPages}
+            </span>
+            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              הבא
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

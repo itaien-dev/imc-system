@@ -9,8 +9,10 @@ import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ProfilePage from './pages/ProfilePage';
 import UsersGridPage from './pages/UsersGridPage';
+import CreateUserPage from './pages/CreateUserPage';
 import UserCardPage from './pages/UserCardPage';
 import WorkshopsGridPage from './pages/WorkshopsGridPage';
+import CreateWorkshopPage from './pages/CreateWorkshopPage';
 import WorkshopCardPage from './pages/WorkshopCardPage';
 import CloseWorkshopPage from './pages/CloseWorkshopPage';
 import ImportCsvPage from './pages/ImportCsvPage';
@@ -36,8 +38,10 @@ export default function App() {
                 {/* Admin only */}
                 <Route element={<AuthGuard adminOnly />}>
                   <Route path="/admin/users" element={<UsersGridPage />} />
+                  <Route path="/admin/users/new" element={<CreateUserPage />} />
                   <Route path="/admin/users/:id" element={<UserCardPage />} />
                   <Route path="/admin/workshops" element={<WorkshopsGridPage />} />
+                  <Route path="/admin/workshops/new" element={<CreateWorkshopPage />} />
                   <Route path="/admin/workshops/:id" element={<WorkshopCardPage />} />
                   <Route path="/admin/workshops/:id/close" element={<CloseWorkshopPage />} />
                   <Route path="/admin/import" element={<ImportCsvPage />} />

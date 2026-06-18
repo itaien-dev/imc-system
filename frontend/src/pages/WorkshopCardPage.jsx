@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import * as workshopsApi from '../api/workshops';
 import StatusBadge from '../components/StatusBadge';
+import AddParticipantModal from '../components/AddParticipantModal';
 
 const TRACK_LABELS = { adults: 'בוגרים', youth: 'נוער', general: 'כללי' };
 
@@ -10,6 +11,7 @@ export default function WorkshopCardPage() {
   const { id } = useParams();
   const workshopId = Number(id);
   const [tab, setTab] = useState('student');
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const { data: workshop, isLoading: loadingWorkshop } = useQuery({
     queryKey: ['workshop', workshopId],
@@ -52,8 +54,11 @@ export default function WorkshopCardPage() {
               </span>
             </div>
             <p style={{ fontSize: 13, color: '#666', margin: '4px 0 0' }}>
-              {new Date(workshop.start_date).toLocaleDateString('he-IL')} –{' '}
-              {new Date(workshop.end_date).toLocaleDateString('he-IL')} · סבב {workshop.cycle_number}
+              <span dir="ltr">
+                {new Date(workshop.start_date).toLocaleDateString('he-IL')} –{' '}
+                {new Date(workshop.end_date).toLocaleDateString('he-IL')}
+              </span>{' '}
+              · סבב {workshop.cycle_number}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -70,23 +75,31 @@ export default function WorkshopCardPage() {
           <Stat label="תאריך משוב" value={workshop.feedback_date ? new Date(workshop.feedback_date).toLocaleDateString('he-IL') : '—'} />
           <Stat
             label="תאריכי פרסום"
-            value={`${new Date(workshop.publish_start_date).toLocaleDateString('he-IL')}–${new Date(
-              workshop.publish_end_date
-            ).toLocaleDateString('he-IL')}`}
+            value={
+              <span dir="ltr">
+                {new Date(workshop.publish_start_date).toLocaleDateString('he-IL')}–
+                {new Date(workshop.publish_end_date).toLocaleDateString('he-IL')}
+              </span>
+            }
           />
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-        <TabButton active={tab === 'student'} onClick={() => setTab('student')}>
-          סטודנטים
-        </TabButton>
-        <TabButton active={tab === 'assistant'} onClick={() => setTab('assistant')}>
-          אסיסטנטים
-        </TabButton>
-        <TabButton active={tab === 'staff'} onClick={() => setTab('staff')}>
-          צוות
-        </TabButton>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <TabButton active={tab === 'student'} onClick={() => setTab('student')}>
+            סטודנטים
+          </TabButton>
+          <TabButton active={tab === 'assistant'} onClick={() => setTab('assistant')}>
+            אסיסטנטים
+          </TabButton>
+          <TabButton active={tab === 'staff'} onClick={() => setTab('staff')}>
+            צוות
+          </TabButton>
+        </div>
+        <button onClick={() => setShowAddModal(true)} style={{ fontWeight: 500 }}>
+          + הוספת משתתף
+        </button>
       </div>
 
       {loadingParticipants ? (
@@ -128,6 +141,10 @@ export default function WorkshopCardPage() {
           </table>
         </div>
       )}
+
+      {showAddModal && (
+        <AddParticipantModal workshopId={workshopId} tab={tab} onClose={() => setShowAddModal(false)} />
+      )}
     </div>
   );
 }
@@ -154,4 +171,12 @@ function TabButton({ active, onClick, children }) {
       {children}
     </button>
   );
+}
+
+function Th({ children }) {
+  return <th style={{ textAlign: 'right', padding: '10px 14px', fontWeight: 500, color: '#555' }}>{children}</th>;
+}
+
+function Td({ children }) {
+  return <td style={{ padding: '10px 14px' }}>{children}</td>;
 }

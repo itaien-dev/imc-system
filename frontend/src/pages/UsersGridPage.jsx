@@ -8,10 +8,10 @@ export default function UsersGridPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(20);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['users', search, status, page],
+    queryKey: ['users', search, status, page, pageSize],
     queryFn: () => usersApi.listUsers({ search, status, page, pageSize }),
   });
 
@@ -63,6 +63,9 @@ export default function UsersGridPage() {
             <option value="לא">לא</option>
           </select>
           <button onClick={handleExport}>ייצוא</button>
+          <Link to="/admin/users/new">
+            <button style={{ fontWeight: 500 }}>+ הוספת משתמש</button>
+          </Link>
         </div>
       </div>
 
@@ -77,6 +80,9 @@ export default function UsersGridPage() {
                 <Th>חבר עמותה</Th>
                 <Th>טלפון</Th>
                 <Th>דוא"ל</Th>
+                <Th>כתובת מגורים</Th>
+                <Th>מגדר</Th>
+                <Th>תאריך לידה</Th>
                 <Th>סדנת סטודנט</Th>
                 <Th>כמות סדנאות</Th>
                 <Th>סדנה אחרונה</Th>
@@ -94,6 +100,9 @@ export default function UsersGridPage() {
                   </Td>
                   <Td>{u.phone || '—'}</Td>
                   <Td>{u.email}</Td>
+                  <Td>{u.address || '—'}</Td>
+                  <Td>{u.gender === 'female' ? 'נקבה' : u.gender === 'male' ? 'זכר' : '—'}</Td>
+                  <Td>{u.birth_date ? new Date(u.birth_date).toLocaleDateString('he-IL') : '—'}</Td>
                   <Td>{u.student_workshop ?? '—'}</Td>
                   <Td>{u.assist_count}</Td>
                   <Td>{u.last_workshop ?? '—'}</Td>
@@ -105,17 +114,37 @@ export default function UsersGridPage() {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 13, color: '#666' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, fontSize: 13, color: '#666' }}>
         <span>
-          מציג {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} מתוך {total}
+          {total > 0 ? `מציג ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} מתוך ${total}` : ''}
         </span>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            הקודם
-          </button>
-          <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-            הבא
-          </button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            שורות בעמוד:
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              style={{ padding: '4px 6px', direction: 'rtl' }}
+            >
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </label>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              הקודם
+            </button>
+            <span>
+              עמוד {page} מתוך {totalPages}
+            </span>
+            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              הבא
+            </button>
+          </div>
         </div>
       </div>
     </div>

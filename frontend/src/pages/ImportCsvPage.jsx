@@ -41,40 +41,21 @@ export default function ImportCsvPage() {
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <button
-          onClick={() => {
-            setEntity('users');
-            setRows(null);
-            setResult(null);
-          }}
+          onClick={() => { setEntity('users'); setRows(null); setResult(null); }}
           style={{ fontWeight: entity === 'users' ? 500 : 400, border: entity === 'users' ? '1px solid #ccc' : '1px solid transparent' }}
         >
           משתמשים
         </button>
         <button
-          onClick={() => {
-            setEntity('workshops');
-            setRows(null);
-            setResult(null);
-          }}
-          style={{
-            fontWeight: entity === 'workshops' ? 500 : 400,
-            border: entity === 'workshops' ? '1px solid #ccc' : '1px solid transparent',
-          }}
+          onClick={() => { setEntity('workshops'); setRows(null); setResult(null); }}
+          style={{ fontWeight: entity === 'workshops' ? 500 : 400, border: entity === 'workshops' ? '1px solid #ccc' : '1px solid transparent' }}
         >
           סדנאות
         </button>
       </div>
 
       <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, padding: 20 }}>
-        <div
-          style={{
-            border: '2px dashed #ccc',
-            borderRadius: 6,
-            padding: '24px',
-            textAlign: 'center',
-            marginBottom: 16,
-          }}
-        >
+        <div style={{ border: '2px dashed #ccc', borderRadius: 6, padding: '24px', textAlign: 'center', marginBottom: 16 }}>
           <input type="file" accept=".csv" onChange={handleFileChange} />
           <p style={{ fontSize: 12, color: '#888', marginTop: 8 }}>קובץ CSV בפורמט UTF-8</p>
         </div>
@@ -92,8 +73,8 @@ export default function ImportCsvPage() {
             <p style={{ fontSize: 13, color: '#666' }}>
               תצוגה מקדימה ({rows.length} שורות{warningCount > 0 ? `, ${warningCount} עם אזהרות` : ''})
             </p>
-            <div style={{ border: '1px solid #e0e0e0', borderRadius: 6, marginBottom: 16, maxHeight: 320, overflowY: 'auto' }}>
-              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+            <div style={{ border: '1px solid #e0e0e0', borderRadius: 6, marginBottom: 16, maxHeight: 320, overflowY: 'auto', overflowX: 'auto' }}>
+              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 900 }}>
                 <thead>
                   <tr style={{ background: '#f5f6f8' }}>
                     {entity === 'users' ? (
@@ -101,6 +82,11 @@ export default function ImportCsvPage() {
                         <Th>שם</Th>
                         <Th>טלפון</Th>
                         <Th>דוא"ל</Th>
+                        <Th>מגדר</Th>
+                        <Th>עיר</Th>
+                        <Th>תאריך לידה</Th>
+                        <Th>סדנת סטודנט</Th>
+                        <Th>סדנאות אסיסט</Th>
                         <Th>פעולה</Th>
                         <Th>אזהרות</Th>
                       </>
@@ -126,6 +112,13 @@ export default function ImportCsvPage() {
                           <Td>{r.full_name}</Td>
                           <Td>{r.phone || '—'}</Td>
                           <Td>{r.email || '—'}</Td>
+                          <Td>{r.gender || '—'}</Td>
+                          <Td>{r.city || '—'}</Td>
+                          <Td>{r.birth_date || '—'}</Td>
+                          <Td>{r.student_workshop || '—'}</Td>
+                          <Td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {r.assist_workshops || '—'}
+                          </Td>
                           <Td>{actionLabel(r.action)}</Td>
                         </>
                       ) : (
@@ -161,6 +154,6 @@ function actionLabel(action) {
 function Th({ children }) {
   return <th style={{ textAlign: 'right', padding: '6px 10px', fontWeight: 500 }}>{children}</th>;
 }
-function Td({ children }) {
-  return <td style={{ padding: '6px 10px' }}>{children}</td>;
+function Td({ children, style }) {
+  return <td style={{ padding: '6px 10px', ...style }}>{children}</td>;
 }

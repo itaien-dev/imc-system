@@ -15,6 +15,11 @@ export async function listUsers({ search, status, page, pageSize }) {
   return data;
 }
 
+export async function createUser(payload) {
+  const { data } = await apiClient.post('/users', payload);
+  return data;
+}
+
 export async function getUser(id) {
   const { data } = await apiClient.get(`/users/${id}`);
   return data;
@@ -40,5 +45,20 @@ export async function exportUsersCsv({ search, status }) {
     params: { search, status },
     responseType: 'blob',
   });
+  return data;
+}
+
+export async function searchUsers(query) {
+  const { data } = await apiClient.get('/users/search', { params: { q: query } });
+  return data;
+}
+
+export async function getMyWorkshopHistory() {
+  const { data } = await apiClient.get('/users/me/history');
+  return data;
+}
+
+export async function getUserWorkshopHistory(id) {
+  const { data } = await apiClient.get(`/users/${id}/history`);
   return data;
 }

@@ -39,7 +39,9 @@ export default function PublicHomePage() {
               סדנת {TRACK_LABELS[w.track] || w.track} #{w.workshop_number}
             </p>
             <p style={{ margin: '4px 0 0', fontSize: 13, color: '#666' }}>
-              {new Date(w.start_date).toLocaleDateString('he-IL')} – {new Date(w.end_date).toLocaleDateString('he-IL')}
+              <span dir="ltr">
+                {new Date(w.start_date).toLocaleDateString('he-IL')} – {new Date(w.end_date).toLocaleDateString('he-IL')}
+              </span>
             </p>
           </div>
           <button onClick={() => setSignupWorkshop(w)}>הרשמה</button>

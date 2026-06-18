@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import * as workshopsApi from '../api/workshops';
@@ -13,17 +13,24 @@ export default function CloseWorkshopPage() {
     queryFn: () => workshopsApi.getClosingSummary(workshopId),
   });
 
-  const [attendedIds, setAttendedIds] = useState([]);
-  const [signupIds, setSignupIds] = useState([]);
   const [result, setResult] = useState(null);
 
-  useEffect(() => {
-    if (data) {
-      // Default: everyone pre-checked, matching the mockup's "common case" assumption.
-      setAttendedIds(data.assistants.map((a) => a.link_id));
-      setSignupIds(data.pendingSignups.map((s) => s.id));
-    }
-  }, [data]);
+  if (isLoading || !data) return <p>טוען...</p>;
+
+  return (
+    <ClosingForm workshopId={workshopId} data={data} navigate={navigate} result={result} setResult={setResult} />
+  );
+}
+
+/**
+ * Separated into its own component so its checkbox state can be initialized directly
+ * from `data` via useState's initializer — `data` is guaranteed present here (the parent
+ * only renders this once loading is done), so there's no need for an effect just to
+ * sync local state from a query result.
+ */
+function ClosingForm({ workshopId, data, navigate, result, setResult }) {
+  const [attendedIds, setAttendedIds] = useState(() => data.assistants.map((a) => a.link_id));
+  const [signupIds, setSignupIds] = useState(() => data.pendingSignups.map((s) => s.id));
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -40,8 +47,6 @@ export default function CloseWorkshopPage() {
   function toggleSignup(signupId) {
     setSignupIds((prev) => (prev.includes(signupId) ? prev.filter((x) => x !== signupId) : [...prev, signupId]));
   }
-
-  if (isLoading || !data) return <p>טוען...</p>;
 
   if (result) {
     return (

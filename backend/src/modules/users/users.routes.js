@@ -52,6 +52,15 @@ router.patch('/me', requireAuth, async (req, res, next) => {
   }
 });
 
+router.get('/me/history', requireAuth, async (req, res, next) => {
+  try {
+    const history = await usersService.getWorkshopHistory(req.user.id);
+    res.json(history);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // --- Admin: grid + single-record management ---
 
 router.get('/', requireAuth, requireAdmin, async (req, res, next) => {
@@ -69,6 +78,29 @@ router.get('/', requireAuth, requireAdmin, async (req, res, next) => {
   }
 });
 
+const createUserSchema = z.object({
+  full_name: z.string().min(1),
+  national_id: z.string().max(9).optional().nullable().or(z.literal('')),
+  birth_date: z.string().optional().nullable().or(z.literal('')),
+  phone: z.string().optional().nullable().or(z.literal('')),
+  email: z.string().email(),
+  address: z.string().optional().nullable().or(z.literal('')),
+  gender: z.enum(['male', 'female']).optional().nullable().or(z.literal('')),
+  membership_expiry_date: z.string().optional().nullable().or(z.literal('')),
+  notes: z.string().optional().nullable(),
+  role: z.enum(['member', 'admin']).optional(),
+});
+
+router.post('/', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const data = createUserSchema.parse(req.body);
+    const user = await usersService.create(data);
+    res.status(201).json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/export', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const { search, status } = req.query;
@@ -76,6 +108,16 @@ router.get('/export', requireAuth, requireAdmin, async (req, res, next) => {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="users_export.csv"');
     res.send('\uFEFF' + csv); // BOM so Excel opens UTF-8/Hebrew correctly
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Must be declared before GET /:id, otherwise Express would treat "search" as an :id value.
+router.get('/search', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const results = await usersService.searchLite(req.query.q);
+    res.json(results);
   } catch (err) {
     next(err);
   }
@@ -95,6 +137,15 @@ router.patch('/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const user = await usersService.updateAsAdmin(Number(req.params.id), req.body);
     res.json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/:id/history', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const history = await usersService.getWorkshopHistory(Number(req.params.id));
+    res.json(history);
   } catch (err) {
     next(err);
   }

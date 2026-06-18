@@ -1,15 +1,53 @@
 const db = require('../../db/connection');
 const { computeAcceptanceCriterion, computeRoundsSinceLast } = require('../../utils/computedFields');
 
-async function list({ page = 1, pageSize = 20 }) {
-  const rows = await db('workshops')
-    .select('*')
+async function list({ search, track, page = 1, pageSize = 20 }) {
+  let query = db('workshops').select('*');
+  let countQuery = db('workshops');
+
+  if (search) {
+    const asNumber = Number(search);
+    if (!Number.isNaN(asNumber)) {
+      query = query.where('workshop_number', asNumber);
+      countQuery = countQuery.where('workshop_number', asNumber);
+    } else {
+      // Non-numeric search can never match an integer column; short-circuit to empty results
+      // rather than let an invalid numeric comparison silently return everything.
+      query = query.where('workshop_number', -1);
+      countQuery = countQuery.where('workshop_number', -1);
+    }
+  }
+  if (track) {
+    query = query.where('track', track);
+    countQuery = countQuery.where('track', track);
+  }
+
+  const rows = await query
     .orderBy('workshop_number', 'asc')
     .limit(pageSize)
     .offset((page - 1) * pageSize);
 
-  const [{ count }] = await db('workshops').count('* as count');
+  const [{ count }] = await countQuery.count('* as count');
   return { rows, total: Number(count), page, pageSize };
+}
+
+/** Creates a workshop manually (admin form), as opposed to via CSV import. */
+async function create(payload) {
+  const [workshop] = await db('workshops')
+    .insert({
+      workshop_number: payload.workshop_number,
+      cycle_number: payload.cycle_number,
+      track: payload.track,
+      start_date: payload.start_date,
+      end_date: payload.end_date,
+      publish_start_date: payload.publish_start_date,
+      publish_end_date: payload.publish_end_date,
+      feedback_date: payload.feedback_date || null,
+      email: payload.email || null,
+      notes: payload.notes || null,
+    })
+    .returning('*');
+  return workshop;
 }
 
 async function getById(id) {
@@ -110,8 +148,44 @@ async function exportParticipantsToCsv(workshopId, role) {
   return lines.join('\n');
 }
 
-/** Adds an existing user manually to a workshop with a given role (brief note #2). */
+/**
+ * Adds an existing user manually to a workshop with a given role (brief note #2),
+ * enforcing two business rules clarified with the association:
+ *
+ * 1. A user can be a "student" at most once, ever, across any workshop. Trying to
+ *    add them as a student a second time (to any workshop, including the same one)
+ *    is rejected.
+ * 2. A user can only be added as assistant/staff if they already have a student
+ *    link somewhere (i.e. they went through the program once) — EXCEPT that they
+ *    may not be added as assistant/staff to the *same* workshop where they were
+ *    the student.
+ */
 async function addParticipantManually({ workshopId, userId, role }) {
+  const existingStudentLink = await db('user_workshop_links')
+    .where('user_id', userId)
+    .where('role', 'student')
+    .first();
+
+  if (role === 'student') {
+    if (existingStudentLink) {
+      const err = new Error('משתמש זה כבר רשום כסטודנט בסדנה אחרת — לא ניתן לרשום סטודנט פעמיים');
+      err.status = 409;
+      throw err;
+    }
+  } else {
+    // Assistant or any staff role (coordinator, dj, facilitator, translator, chaperone).
+    if (!existingStudentLink) {
+      const err = new Error('ניתן להוסיף כאסיסטנט/איש צוות רק משתמש שהיה סטודנט בעבר באחת הסדנאות');
+      err.status = 409;
+      throw err;
+    }
+    if (existingStudentLink.workshop_id === workshopId) {
+      const err = new Error('משתמש זה היה סטודנט באותה סדנה — לא ניתן לרשום אותו גם כאסיסטנט/איש צוות באותה סדנה');
+      err.status = 409;
+      throw err;
+    }
+  }
+
   const [link] = await db('user_workshop_links')
     .insert({ workshop_id: workshopId, user_id: userId, role })
     .returning('*');
@@ -193,6 +267,7 @@ async function closeWorkshop(workshopId, { attendedAssistantLinkIds = [], proces
 
 module.exports = {
   list,
+  create,
   getById,
   getParticipants,
   exportParticipantsToCsv,
