@@ -283,6 +283,13 @@ async function closeWorkshop(workshopId, { attendedAssistantLinkIds = [], proces
   });
 }
 
+async function removeParticipant(workshopId, linkId) {
+  const deleted = await db('user_workshop_links')
+    .where({ id: linkId, workshop_id: workshopId })
+    .delete();
+  return deleted > 0;
+}
+
 module.exports = {
   list,
   create,
@@ -290,6 +297,7 @@ module.exports = {
   getParticipants,
   exportParticipantsToCsv,
   addParticipantManually,
+  removeParticipant,
   getClosingSummary,
   closeWorkshop,
 };

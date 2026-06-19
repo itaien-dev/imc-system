@@ -25,6 +25,11 @@ export async function addParticipant(workshopId, userId, role) {
   return data;
 }
 
+export async function removeParticipant(workshopId, linkId) {
+  const { data } = await apiClient.delete(`/workshops/${workshopId}/participants/${linkId}`);
+  return data;
+}
+
 export async function exportParticipantsCsv(workshopId, role) {
   const { data } = await apiClient.get(`/workshops/${workshopId}/export`, {
     params: { role },

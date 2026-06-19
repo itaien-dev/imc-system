@@ -104,6 +104,19 @@ router.post('/:id/participants', requireAuth, requireAdmin, async (req, res, nex
   }
 });
 
+router.delete('/:id/participants/:linkId', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const deleted = await workshopsService.removeParticipant(
+      Number(req.params.id),
+      Number(req.params.linkId),
+    );
+    if (!deleted) return res.status(404).json({ error: 'Participant link not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/:id/closing-summary', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const summary = await workshopsService.getClosingSummary(Number(req.params.id));

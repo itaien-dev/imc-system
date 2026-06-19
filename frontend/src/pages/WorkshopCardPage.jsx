@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as workshopsApi from '../api/workshops';
 import StatusBadge from '../components/StatusBadge';
 import AddParticipantModal from '../components/AddParticipantModal';
@@ -13,6 +13,20 @@ export default function WorkshopCardPage() {
   const workshopId = Number(id);
   const [tab, setTab] = useState('student');
   const [showAddModal, setShowAddModal] = useState(false);
+  const queryClient = useQueryClient();
+
+  const removeMutation = useMutation({
+    mutationFn: (linkId) => workshopsApi.removeParticipant(workshopId, linkId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['participants', workshopId, tab] });
+      queryClient.invalidateQueries({ queryKey: ['workshop', workshopId] });
+    },
+  });
+
+  function handleRemove(linkId, name) {
+    if (!window.confirm(`למחוק את ${name} מהסדנה?`)) return;
+    removeMutation.mutate(linkId);
+  }
 
   const { data: workshop, isLoading: loadingWorkshop } = useQuery({
     queryKey: ['workshop', workshopId],
@@ -115,12 +129,13 @@ export default function WorkshopCardPage() {
                 <Th>תאריך רישום</Th>
                 {tab === 'assistant' && <Th>לפני כמה סבבים השתתף</Th>}
                 {tab === 'staff' && <Th>תפקיד</Th>}
+                <Th></Th>
               </tr>
             </thead>
             <tbody>
               {participants?.map((p) => (
                 <tr key={p.link_id} style={{ borderTop: '1px solid #e0e0e0' }}>
-                  <Td>{p.full_name}</Td>
+                  <Td><Link to={`/admin/users/${p.user_id}`}>{p.full_name}</Link></Td>
                   {tab === 'assistant' && (
                     <Td>
                       <StatusBadge value={p.acceptance_criterion} />
@@ -129,6 +144,16 @@ export default function WorkshopCardPage() {
                   <Td>{new Date(p.registered_at).toLocaleDateString('he-IL')}</Td>
                   {tab === 'assistant' && <Td>{p.rounds_since_last ?? '—'}</Td>}
                   {tab === 'staff' && <Td>{STAFF_ROLE_LABELS[p.role] || p.role}</Td>}
+                  <Td>
+                    <button
+                      onClick={() => handleRemove(p.link_id, p.full_name)}
+                      disabled={removeMutation.isPending}
+                      style={{ color: '#c0392b', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}
+                      title="מחיקה"
+                    >
+                      ✕
+                    </button>
+                  </Td>
                 </tr>
               ))}
               {participants?.length === 0 && (
