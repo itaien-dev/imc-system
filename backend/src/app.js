@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const passport = require('passport');
+passport.use(require('./modules/auth/google.strategy'));
 const authRoutes = require('./modules/auth/auth.routes');
 const usersRoutes = require('./modules/users/users.routes');
 const workshopsRoutes = require('./modules/workshops/workshops.routes');
@@ -15,6 +17,7 @@ const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
   : null;
 
 app.use(cors({ origin: allowedOrigins || true }));
+app.use(passport.initialize());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 

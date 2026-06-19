@@ -1,9 +1,25 @@
 const express = require('express');
 const { z } = require('zod');
+const passport = require('passport');
 const authService = require('./auth.service');
 const { requireAuth } = require('../../middleware/auth');
+const { signAccessToken, signRefreshToken } = require('../../utils/tokens');
 
 const router = express.Router();
+
+// Google OAuth
+router.get('/google', passport.authenticate('google', { scope: ['email', 'profile'], session: false }));
+
+router.get('/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: `${process.env.FRONTEND_URL}/login?error=no_account` }),
+  (req, res) => {
+    const user = req.user;
+    const accessToken = signAccessToken(user);
+    const refreshToken = signRefreshToken(user);
+    const params = new URLSearchParams({ accessToken, refreshToken });
+    res.redirect(`${process.env.FRONTEND_URL}/auth/google/callback?${params}`);
+  }
+);
 
 const loginSchema = z.object({
   email: z.string().email(),

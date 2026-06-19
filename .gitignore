@@ -4,3 +4,5 @@ node_modules/
 *.log
 dist/
 backend/src/db/migrations/*.js.bak
+client_secret_*.json
+IMC_Handoff*
