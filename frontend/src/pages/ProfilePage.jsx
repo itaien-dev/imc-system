@@ -137,6 +137,17 @@ export default function ProfilePage() {
       </div>
 
       <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, padding: 20, marginTop: 12 }}>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>נתונים מחושבים</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, fontSize: 13 }}>
+          <Stat label="גיל" value={user.age ?? '—'} />
+          <Stat label="כמות סדנאות (אסיסט)" value={user.assist_count} />
+          <Stat label="סדנת סטודנט" value={user.student_workshop ?? '—'} />
+          <Stat label="סדנה אחרונה" value={user.last_workshop ?? '—'} />
+          <Stat label="סדנאות בתפקיד" value={user.staff_count || '—'} />
+        </div>
+      </div>
+
+      <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, padding: 20, marginTop: 12 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>שינוי סיסמה</h3>
         <form onSubmit={handleChangePassword}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 12 }}>
@@ -228,6 +239,15 @@ function Field({ label, value, onChange, type = 'text' }) {
         onChange={(e) => onChange(e.target.value)}
         style={{ width: '100%', padding: 8, direction: 'rtl' }}
       />
+    </div>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div style={{ background: '#f5f6f8', borderRadius: 6, padding: '10px 12px' }}>
+      <p style={{ margin: 0, color: '#666', fontSize: 12 }}>{label}</p>
+      <p style={{ margin: '2px 0 0', fontWeight: 500, fontSize: 16 }}>{value}</p>
     </div>
   );
 }

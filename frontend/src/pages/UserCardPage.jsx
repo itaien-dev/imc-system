@@ -168,11 +168,12 @@ export default function UserCardPage() {
 
       <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>נתונים מחושבים</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, fontSize: 13 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, fontSize: 13 }}>
           <Stat label="גיל" value={user.age ?? '—'} />
           <Stat label="כמות סדנאות (אסיסט)" value={user.assist_count} />
           <Stat label="סדנת סטודנט" value={user.student_workshop ?? '—'} />
           <Stat label="סדנה אחרונה" value={user.last_workshop ?? '—'} />
+          <Stat label="סדנאות בתפקיד" value={user.staff_count || '—'} />
         </div>
       </div>
 

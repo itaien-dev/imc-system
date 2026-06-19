@@ -32,12 +32,16 @@ async function attachComputedFields(user) {
   const computedMap = await getUserComputedFieldsBulk([user.id]);
   const computed = computedMap.get(user.id) || { assist_count: 0, student_workshop: null, last_workshop: null };
 
-  // Fetch recruiter info via user_recruitments
   const recruiterRow = await db('user_recruitments')
     .join('users as r', 'r.id', 'user_recruitments.recruiter_id')
     .select('r.id as recruiter_id', 'r.full_name as recruiter_name', 'r.email as recruiter_email')
     .where('user_recruitments.recruit_id', user.id)
     .first();
+
+  const [{ count: staffCount }] = await db('user_workshop_links')
+    .where('user_id', user.id)
+    .whereIn('role', ['facilitator', 'coordinator', 'dj', 'chaperone', 'translator'])
+    .count('* as count');
 
   return {
     ...user,
@@ -49,6 +53,7 @@ async function attachComputedFields(user) {
     assist_count: computed.assist_count,
     student_workshop: computed.student_workshop,
     last_workshop: computed.last_workshop,
+    staff_count: Number(staffCount),
     recruiter_id:    recruiterRow?.recruiter_id    ?? null,
     recruiter_name:  recruiterRow?.recruiter_name  ?? null,
     recruiter_email: recruiterRow?.recruiter_email ?? null,
