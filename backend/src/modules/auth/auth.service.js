@@ -1,7 +1,12 @@
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const sgMail = require('@sendgrid/mail');
 const db = require('../../db/connection');
 const { signAccessToken, signRefreshToken } = require('../../utils/tokens');
+
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
 
 // In-memory store for password reset tokens — fine for a single-instance dev/staging deployment.
 // For production with multiple server instances, move this to a DB table or Redis.
@@ -29,8 +34,33 @@ async function requestPasswordReset(email) {
   const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
   resetTokens.set(token, { userId: user.id, expiresAt });
 
-  // TODO: wire to a real email provider (SendGrid / SES) per the dev brief, section 1.1.
-  console.log(`[dev only] Password reset link for ${email}: /reset-password?token=${token}`);
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+
+  if (process.env.SENDGRID_API_KEY) {
+    await sgMail.send({
+      to: email,
+      from: { email: 'kesher.imc@gmail.com', name: 'מערכת מ.ל.א' },
+      subject: 'איפוס סיסמה — מערכת מ.ל.א',
+      html: `
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 480px; margin: auto;">
+          <h2 style="color: #2E75B6;">איפוס סיסמה</h2>
+          <p>שלום ${user.full_name},</p>
+          <p>קיבלנו בקשה לאיפוס הסיסמה שלך במערכת עמותת מ.ל.א.</p>
+          <p>לחץ על הכפתור הבא לאיפוס הסיסמה (הקישור תקף לשעה אחת):</p>
+          <a href="${resetLink}"
+             style="display:inline-block;padding:12px 24px;background:#2E75B6;color:#fff;text-decoration:none;border-radius:4px;font-size:15px;">
+            איפוס סיסמה
+          </a>
+          <p style="margin-top:24px;color:#888;font-size:12px;">
+            אם לא ביקשת לאפס את הסיסמה, אפשר להתעלם מהודעה זו.
+          </p>
+        </div>
+      `,
+    });
+  } else {
+    console.log(`[dev] Password reset link for ${email}: ${resetLink}`);
+  }
 }
 
 async function resetPassword({ token, newPassword }) {
