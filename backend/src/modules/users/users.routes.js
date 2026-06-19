@@ -65,12 +65,14 @@ router.get('/me/history', requireAuth, async (req, res, next) => {
 
 router.get('/', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const { search, status, page, pageSize } = req.query;
+    const { search, status, page, pageSize, sortBy, sortDir } = req.query;
     const result = await usersService.list({
       search,
       status,
       page: page ? Number(page) : 1,
       pageSize: pageSize ? Number(pageSize) : 20,
+      sortBy,
+      sortDir,
     });
     res.json(result);
   } catch (err) {

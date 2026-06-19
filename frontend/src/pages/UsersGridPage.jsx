@@ -9,10 +9,12 @@ export default function UsersGridPage() {
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState('full_name');
+  const [sortDir, setSortDir] = useState('asc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['users', search, status, page, pageSize],
-    queryFn: () => usersApi.listUsers({ search, status, page, pageSize }),
+    queryKey: ['users', search, status, page, pageSize, sortBy, sortDir],
+    queryFn: () => usersApi.listUsers({ search, status, page, pageSize, sortBy, sortDir }),
   });
 
   async function handleExport() {
@@ -28,6 +30,16 @@ export default function UsersGridPage() {
   const total = data?.total || 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
+  function handleSort(col) {
+    if (sortBy === col) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(col);
+      setSortDir('asc');
+    }
+    setPage(1);
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -42,18 +54,12 @@ export default function UsersGridPage() {
             type="text"
             placeholder='חיפוש לפי שם, טלפון או דוא"ל'
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             style={{ width: 240, padding: 8, direction: 'rtl' }}
           />
           <select
             value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => { setStatus(e.target.value); setPage(1); }}
             style={{ padding: 8, direction: 'rtl' }}
           >
             <option value="">כל הסטטוסים</option>
@@ -76,28 +82,25 @@ export default function UsersGridPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f5f6f8' }}>
-                <Th>שם</Th>
-                <Th>חבר עמותה</Th>
+                <SortTh col="full_name" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>שם</SortTh>
+                <SortTh col="membership_status" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>חבר עמותה</SortTh>
                 <Th>טלפון</Th>
                 <Th>דוא"ל</Th>
                 <Th>כתובת מגורים</Th>
                 <Th>מגדר</Th>
                 <Th>תאריך לידה</Th>
-                <Th>סדנת סטודנט</Th>
-                <Th>כמות סדנאות</Th>
-                <Th>סדנה אחרונה</Th>
-                <Th>גיל</Th>
+                <SortTh col="student_workshop" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>סדנת סטודנט</SortTh>
+                <SortTh col="assist_count" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>כמות סדנאות</SortTh>
+                <SortTh col="last_workshop" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>סדנה אחרונה</SortTh>
+                <SortTh col="staff_count" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>סדנאות בתפקיד</SortTh>
+                <SortTh col="age" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>גיל</SortTh>
               </tr>
             </thead>
             <tbody>
               {data?.rows.map((u) => (
                 <tr key={u.id} style={{ borderTop: '1px solid #e0e0e0' }}>
-                  <Td>
-                    <Link to={`/admin/users/${u.id}`}>{u.full_name}</Link>
-                  </Td>
-                  <Td>
-                    <StatusBadge value={u.membership_status} />
-                  </Td>
+                  <Td><Link to={`/admin/users/${u.id}`}>{u.full_name}</Link></Td>
+                  <Td><StatusBadge value={u.membership_status} /></Td>
                   <Td>{u.phone || '—'}</Td>
                   <Td>{u.email}</Td>
                   <Td>{u.address || '—'}</Td>
@@ -106,6 +109,7 @@ export default function UsersGridPage() {
                   <Td>{u.student_workshop ?? '—'}</Td>
                   <Td>{u.assist_count}</Td>
                   <Td>{u.last_workshop ?? '—'}</Td>
+                  <Td>{u.staff_count || '—'}</Td>
                   <Td>{u.age ?? '—'}</Td>
                 </tr>
               ))}
@@ -123,10 +127,7 @@ export default function UsersGridPage() {
             שורות בעמוד:
             <select
               value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setPage(1);
-              }}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
               style={{ padding: '4px 6px', direction: 'rtl' }}
             >
               <option value={20}>20</option>
@@ -135,19 +136,33 @@ export default function UsersGridPage() {
             </select>
           </label>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              הקודם
-            </button>
-            <span>
-              עמוד {page} מתוך {totalPages}
-            </span>
-            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-              הבא
-            </button>
+            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>הקודם</button>
+            <span>עמוד {page} מתוך {totalPages}</span>
+            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>הבא</button>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function SortTh({ col, sortBy, sortDir, onSort, children }) {
+  const active = sortBy === col;
+  return (
+    <th
+      onClick={() => onSort(col)}
+      style={{
+        textAlign: 'right',
+        padding: '10px 14px',
+        fontWeight: 500,
+        color: active ? '#2E75B6' : '#555',
+        cursor: 'pointer',
+        userSelect: 'none',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {children} {active ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+    </th>
   );
 }
 

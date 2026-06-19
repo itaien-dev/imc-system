@@ -1,8 +1,28 @@
 const db = require('../../db/connection');
 const { computeAcceptanceCriterion, computeRoundsSinceLast } = require('../../utils/computedFields');
 
-async function list({ search, track, page = 1, pageSize = 20 }) {
-  let query = db('workshops').select('*');
+const ALLOWED_WORKSHOP_SORT = ['workshop_number', 'start_date', 'end_date', 'cycle_number'];
+
+async function list({ search, track, page = 1, pageSize = 20, sortBy = 'workshop_number', sortDir = 'asc' }) {
+  const col = ALLOWED_WORKSHOP_SORT.includes(sortBy) ? sortBy : 'workshop_number';
+  const dir = sortDir === 'desc' ? 'desc' : 'asc';
+
+  const staffSubquery = (role) =>
+    db.raw(
+      `(SELECT string_agg(u.full_name, ', ' ORDER BY u.full_name)
+        FROM user_workshop_links uwl
+        JOIN users u ON u.id = uwl.user_id
+        WHERE uwl.workshop_id = workshops.id AND uwl.role = ?) as ??`,
+      [role, role + 's']
+    );
+
+  let query = db('workshops').select(
+    'workshops.*',
+    staffSubquery('facilitator'),
+    staffSubquery('coordinator'),
+    staffSubquery('dj'),
+    staffSubquery('chaperone')
+  );
   let countQuery = db('workshops');
 
   if (search) {
@@ -11,8 +31,6 @@ async function list({ search, track, page = 1, pageSize = 20 }) {
       query = query.where('workshop_number', asNumber);
       countQuery = countQuery.where('workshop_number', asNumber);
     } else {
-      // Non-numeric search can never match an integer column; short-circuit to empty results
-      // rather than let an invalid numeric comparison silently return everything.
       query = query.where('workshop_number', -1);
       countQuery = countQuery.where('workshop_number', -1);
     }
@@ -23,7 +41,7 @@ async function list({ search, track, page = 1, pageSize = 20 }) {
   }
 
   const rows = await query
-    .orderBy('workshop_number', 'asc')
+    .orderBy(col, dir)
     .limit(pageSize)
     .offset((page - 1) * pageSize);
 

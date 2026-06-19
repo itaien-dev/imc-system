@@ -10,8 +10,8 @@ export async function updateMe(patch) {
   return data;
 }
 
-export async function listUsers({ search, status, page, pageSize }) {
-  const { data } = await apiClient.get('/users', { params: { search, status, page, pageSize } });
+export async function listUsers({ search, status, page, pageSize, sortBy, sortDir }) {
+  const { data } = await apiClient.get('/users', { params: { search, status, page, pageSize, sortBy, sortDir } });
   return data;
 }
 

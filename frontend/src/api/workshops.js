@@ -1,7 +1,7 @@
 import apiClient from './client';
 
-export async function listWorkshops({ search, track, page, pageSize } = {}) {
-  const { data } = await apiClient.get('/workshops', { params: { search, track, page, pageSize } });
+export async function listWorkshops({ search, track, page, pageSize, sortBy, sortDir } = {}) {
+  const { data } = await apiClient.get('/workshops', { params: { search, track, page, pageSize, sortBy, sortDir } });
   return data;
 }
 

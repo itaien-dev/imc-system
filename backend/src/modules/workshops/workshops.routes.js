@@ -7,12 +7,14 @@ const router = express.Router();
 
 router.get('/', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const { search, track, page, pageSize } = req.query;
+    const { search, track, page, pageSize, sortBy, sortDir } = req.query;
     const result = await workshopsService.list({
       search,
       track,
       page: page ? Number(page) : 1,
       pageSize: pageSize ? Number(pageSize) : 20,
+      sortBy,
+      sortDir,
     });
     res.json(result);
   } catch (err) {

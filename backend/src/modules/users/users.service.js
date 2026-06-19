@@ -67,7 +67,18 @@ const MEMBERSHIP_STATUS_SQL = `
   END
 `;
 
-async function list({ search, status, page = 1, pageSize = 20 }) {
+const STAFF_COUNT_SQL = `(
+  SELECT COUNT(*) FROM user_workshop_links
+  WHERE user_workshop_links.user_id = users.id
+  AND user_workshop_links.role IN ('facilitator','coordinator','dj','chaperone','translator')
+)`;
+
+const ALLOWED_USER_SORT = ['full_name', 'age', 'assist_count', 'student_workshop', 'last_workshop', 'staff_count', 'membership_status'];
+
+async function list({ search, status, page = 1, pageSize = 20, sortBy = 'full_name', sortDir = 'asc' }) {
+  const dir = sortDir === 'desc' ? 'desc' : 'asc';
+  const col = ALLOWED_USER_SORT.includes(sortBy) ? sortBy : 'full_name';
+
   let query = db('users').select(PUBLIC_FIELDS);
 
   if (search) {
@@ -85,15 +96,27 @@ async function list({ search, status, page = 1, pageSize = 20 }) {
   const countQuery = query.clone();
   const [{ count }] = await countQuery.clearSelect().count('* as count');
 
-  const rows = await query
-    .orderBy('full_name')
-    .limit(pageSize)
-    .offset((page - 1) * pageSize);
+  // Computed sort columns — resolved after fetching rows
+  const COMPUTED_SORT = ['age', 'assist_count', 'student_workshop', 'last_workshop', 'staff_count', 'membership_status'];
+  const dbRows = await (COMPUTED_SORT.includes(col)
+    ? query.orderBy('full_name', 'asc')
+    : query.orderBy(col, dir))
+    .limit(COMPUTED_SORT.includes(col) ? 999999 : pageSize)
+    .offset(COMPUTED_SORT.includes(col) ? 0 : (page - 1) * pageSize);
 
-  const userIds = rows.map((r) => r.id);
+  const userIds = dbRows.map((r) => r.id);
   const computedMap = await getUserComputedFieldsBulk(userIds);
 
-  const withComputed = rows.map((user) => {
+  // Fetch staff_count for all users in one query
+  const staffCounts = await db('user_workshop_links')
+    .select('user_id')
+    .count('* as cnt')
+    .whereIn('user_id', userIds)
+    .whereIn('role', ['facilitator', 'coordinator', 'dj', 'chaperone', 'translator'])
+    .groupBy('user_id');
+  const staffCountMap = new Map(staffCounts.map((r) => [r.user_id, Number(r.cnt)]));
+
+  let withComputed = dbRows.map((user) => {
     const computed = computedMap.get(user.id) || { assist_count: 0, student_workshop: null, last_workshop: null };
     return {
       ...user,
@@ -105,8 +128,20 @@ async function list({ search, status, page = 1, pageSize = 20 }) {
       assist_count: computed.assist_count,
       student_workshop: computed.student_workshop,
       last_workshop: computed.last_workshop,
+      staff_count: staffCountMap.get(user.id) || 0,
     };
   });
+
+  if (COMPUTED_SORT.includes(col)) {
+    withComputed.sort((a, b) => {
+      const av = a[col] ?? (typeof a[col] === 'number' ? -Infinity : '');
+      const bv = b[col] ?? (typeof b[col] === 'number' ? -Infinity : '');
+      const cmp = typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv), 'he');
+      return dir === 'asc' ? cmp : -cmp;
+    });
+    const start = (page - 1) * pageSize;
+    withComputed = withComputed.slice(start, start + pageSize);
+  }
 
   return { rows: withComputed, total: Number(count), page, pageSize };
 }

@@ -10,14 +10,26 @@ export default function WorkshopsGridPage() {
   const [track, setTrack] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState('workshop_number');
+  const [sortDir, setSortDir] = useState('asc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['workshops', search, track, page, pageSize],
-    queryFn: () => workshopsApi.listWorkshops({ search, track, page, pageSize }),
+    queryKey: ['workshops', search, track, page, pageSize, sortBy, sortDir],
+    queryFn: () => workshopsApi.listWorkshops({ search, track, page, pageSize, sortBy, sortDir }),
   });
 
   const total = data?.total || 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  function handleSort(col) {
+    if (sortBy === col) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(col);
+      setSortDir('asc');
+    }
+    setPage(1);
+  }
 
   return (
     <div>
@@ -33,18 +45,12 @@ export default function WorkshopsGridPage() {
             type="text"
             placeholder="חיפוש לפי מספר סדנה"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             style={{ width: 200, padding: 8, direction: 'rtl' }}
           />
           <select
             value={track}
-            onChange={(e) => {
-              setTrack(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => { setTrack(e.target.value); setPage(1); }}
             style={{ padding: 8, direction: 'rtl' }}
           >
             <option value="">כל השיוכים</option>
@@ -65,11 +71,15 @@ export default function WorkshopsGridPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f5f6f8' }}>
-                <Th>מספר סדנה</Th>
+                <SortTh col="workshop_number" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>מספר סדנה</SortTh>
                 <Th>שיוך</Th>
-                <Th>תאריך התחלה</Th>
-                <Th>תאריך סיום</Th>
-                <Th>סבב</Th>
+                <SortTh col="start_date" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>תאריך התחלה</SortTh>
+                <SortTh col="end_date" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>תאריך סיום</SortTh>
+                <SortTh col="cycle_number" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>סבב</SortTh>
+                <Th>מנחים</Th>
+                <Th>רכזים</Th>
+                <Th>DJ</Th>
+                <Th>מלווה</Th>
               </tr>
             </thead>
             <tbody>
@@ -82,11 +92,15 @@ export default function WorkshopsGridPage() {
                   <Td>{new Date(w.start_date).toLocaleDateString('he-IL')}</Td>
                   <Td>{new Date(w.end_date).toLocaleDateString('he-IL')}</Td>
                   <Td>{w.cycle_number}</Td>
+                  <Td>{w.facilitators || '—'}</Td>
+                  <Td>{w.coordinators || '—'}</Td>
+                  <Td>{w.djs || '—'}</Td>
+                  <Td>{w.chaperones || '—'}</Td>
                 </tr>
               ))}
               {data?.rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ padding: 16, textAlign: 'center', color: '#999' }}>
+                  <td colSpan={9} style={{ padding: 16, textAlign: 'center', color: '#999' }}>
                     לא נמצאו סדנאות
                   </td>
                 </tr>
@@ -105,10 +119,7 @@ export default function WorkshopsGridPage() {
             שורות בעמוד:
             <select
               value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setPage(1);
-              }}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
               style={{ padding: '4px 6px', direction: 'rtl' }}
             >
               <option value={20}>20</option>
@@ -117,19 +128,33 @@ export default function WorkshopsGridPage() {
             </select>
           </label>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              הקודם
-            </button>
-            <span>
-              עמוד {page} מתוך {totalPages}
-            </span>
-            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-              הבא
-            </button>
+            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>הקודם</button>
+            <span>עמוד {page} מתוך {totalPages}</span>
+            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>הבא</button>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function SortTh({ col, sortBy, sortDir, onSort, children }) {
+  const active = sortBy === col;
+  return (
+    <th
+      onClick={() => onSort(col)}
+      style={{
+        textAlign: 'right',
+        padding: '10px 14px',
+        fontWeight: 500,
+        color: active ? '#2E75B6' : '#555',
+        cursor: 'pointer',
+        userSelect: 'none',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {children} {active ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+    </th>
   );
 }
 
