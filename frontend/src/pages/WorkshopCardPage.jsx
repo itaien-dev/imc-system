@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import * as workshopsApi from '../api/workshops';
 import StatusBadge from '../components/StatusBadge';
 import AddParticipantModal from '../components/AddParticipantModal';
+import { STAFF_ROLE_LABELS } from '../components/staffRoles';
 
 const TRACK_LABELS = { adults: 'בוגרים', youth: 'נוער', general: 'כללי' };
 
@@ -127,7 +128,7 @@ export default function WorkshopCardPage() {
                   )}
                   <Td>{new Date(p.registered_at).toLocaleDateString('he-IL')}</Td>
                   {tab === 'assistant' && <Td>{p.rounds_since_last ?? '—'}</Td>}
-                  {tab === 'staff' && <Td>{p.role}</Td>}
+                  {tab === 'staff' && <Td>{STAFF_ROLE_LABELS[p.role] || p.role}</Td>}
                 </tr>
               ))}
               {participants?.length === 0 && (
