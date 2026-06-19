@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as usersApi from '../api/users';
+import * as authApi from '../api/auth';
 import StatusBadge from '../components/StatusBadge';
 import WorkshopHistoryTable from '../components/WorkshopHistoryTable';
 import { STAFF_ROLES } from '../components/staffRoles';
@@ -16,6 +17,8 @@ export default function ProfilePage() {
   });
   const [form, setForm] = useState(null);
   const [savedMessage, setSavedMessage] = useState('');
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  const [pwMessage, setPwMessage] = useState({ text: '', error: false });
 
   const mutation = useMutation({
     mutationFn: (patch) => usersApi.updateMe(patch),
@@ -32,6 +35,22 @@ export default function ProfilePage() {
 
   function handleChange(field, value) {
     setForm({ ...current, [field]: value });
+  }
+
+  async function handleChangePassword(e) {
+    e.preventDefault();
+    if (pwForm.next !== pwForm.confirm) {
+      setPwMessage({ text: 'הסיסמאות החדשות אינן תואמות', error: true });
+      return;
+    }
+    try {
+      await authApi.changePassword(pwForm.current, pwForm.next);
+      setPwMessage({ text: 'הסיסמה עודכנה בהצלחה', error: false });
+      setPwForm({ current: '', next: '', confirm: '' });
+      setTimeout(() => setPwMessage({ text: '', error: false }), 3000);
+    } catch (err) {
+      setPwMessage({ text: err.response?.data?.error || 'שגיאה בעדכון הסיסמה', error: true });
+    }
   }
 
   function handleSave() {
@@ -115,6 +134,38 @@ export default function ProfilePage() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, padding: 20, marginTop: 12 }}>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>שינוי סיסמה</h3>
+        <form onSubmit={handleChangePassword}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>סיסמה נוכחית</label>
+              <input type="password" value={pwForm.current} required
+                onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })}
+                style={{ width: '100%', padding: 8, direction: 'rtl' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>סיסמה חדשה</label>
+              <input type="password" value={pwForm.next} required minLength={8}
+                onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })}
+                style={{ width: '100%', padding: 8, direction: 'rtl' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>אימות סיסמה חדשה</label>
+              <input type="password" value={pwForm.confirm} required minLength={8}
+                onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+                style={{ width: '100%', padding: 8, direction: 'rtl' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button type="submit" style={{ fontWeight: 500 }}>עדכן סיסמה</button>
+            {pwMessage.text && (
+              <span style={{ fontSize: 13, color: pwMessage.error ? '#c0392b' : '#1e7e34' }}>{pwMessage.text}</span>
+            )}
+          </div>
+        </form>
       </div>
 
       <div

@@ -75,4 +75,21 @@ async function resetPassword({ token, newPassword }) {
   resetTokens.delete(token);
 }
 
-module.exports = { login, requestPasswordReset, resetPassword };
+async function changePassword({ userId, currentPassword, newPassword }) {
+  const user = await db('users').where('id', userId).first();
+  if (!user || !user.password_hash) {
+    const err = new Error('לא ניתן לשנות סיסמה לחשבון זה');
+    err.status = 400;
+    throw err;
+  }
+  const valid = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!valid) {
+    const err = new Error('הסיסמה הנוכחית שגויה');
+    err.status = 400;
+    throw err;
+  }
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await db('users').where('id', userId).update({ password_hash: passwordHash });
+}
+
+module.exports = { login, requestPasswordReset, resetPassword, changePassword };

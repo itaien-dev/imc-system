@@ -1,6 +1,7 @@
 const express = require('express');
 const { z } = require('zod');
 const authService = require('./auth.service');
+const { requireAuth } = require('../../middleware/auth');
 
 const router = express.Router();
 
@@ -44,6 +45,21 @@ router.post('/reset-password', async (req, res, next) => {
   try {
     const { token, newPassword } = resetSchema.parse(req.body);
     await authService.resetPassword({ token, newPassword });
+    res.json({ message: 'הסיסמה עודכנה בהצלחה' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
+router.post('/change-password', requireAuth, async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+    await authService.changePassword({ userId: req.user.id, currentPassword, newPassword });
     res.json({ message: 'הסיסמה עודכנה בהצלחה' });
   } catch (err) {
     next(err);
