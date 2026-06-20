@@ -9,8 +9,8 @@ export default function UsersGridPage() {
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [sortBy, setSortBy] = useState('full_name');
-  const [sortDir, setSortDir] = useState('asc');
+  const [sortBy, setSortBy] = useState('assist_count');
+  const [sortDir, setSortDir] = useState('desc');
 
   const { data, isLoading } = useQuery({
     queryKey: ['users', search, status, page, pageSize, sortBy, sortDir],
