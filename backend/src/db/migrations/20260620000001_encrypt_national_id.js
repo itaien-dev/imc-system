@@ -23,11 +23,8 @@ exports.up = async function (knex) {
     [key]
   );
 
-  await knex.schema.alterTable('users', (table) => {
-    table.dropColumn('national_id');
-  });
-
-  await knex.schema.renameColumn('users', 'national_id_enc', 'national_id');
+  await knex.raw('ALTER TABLE users DROP COLUMN national_id');
+  await knex.raw('ALTER TABLE users RENAME COLUMN national_id_enc TO national_id');
 };
 
 exports.down = async function (knex) {
@@ -45,9 +42,6 @@ exports.down = async function (knex) {
     [key]
   );
 
-  await knex.schema.alterTable('users', (table) => {
-    table.dropColumn('national_id');
-  });
-
-  await knex.schema.renameColumn('users', 'national_id_plain', 'national_id');
+  await knex.raw('ALTER TABLE users DROP COLUMN national_id');
+  await knex.raw('ALTER TABLE users RENAME COLUMN national_id_plain TO national_id');
 };
