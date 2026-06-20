@@ -1,8 +1,11 @@
 const express = require('express');
 const { z } = require('zod');
+const sgMail = require('@sendgrid/mail');
 const usersService = require('./users.service');
 const { requireAuth, requireAdmin } = require('../../middleware/auth');
 const { logAccess } = require('../../utils/accessLog');
+
+const ADMIN_EMAIL = 'itaien@gmail.com';
 
 const router = express.Router();
 
@@ -48,6 +51,26 @@ router.patch('/me', requireAuth, async (req, res, next) => {
     const result = await usersService.updateSelf(req.user.id, parseResult.data);
     const updatedUser = await usersService.getById(req.user.id);
     res.json({ ...result, user: updatedUser });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/me/request-deletion', requireAuth, async (req, res, next) => {
+  try {
+    const user = await usersService.requestDeletion(req.user.id);
+    // Send email notification to admin
+    if (process.env.SENDGRID_API_KEY) {
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      await sgMail.send({
+        to: ADMIN_EMAIL,
+        from: process.env.EMAIL_FROM || 'no-reply@imc.org.il',
+        subject: `בקשת מחיקת חשבון — ${user.full_name}`,
+        text: `המשתמש ${user.full_name} (${user.email}) ביקש למחוק את חשבונו.\n\nתאריך הבקשה: ${new Date().toLocaleString('he-IL')}\n\nכדי לאשר את המחיקה, כנס למערכת ועבור לכרטיס המשתמש.`,
+        html: `<div dir="rtl"><p>המשתמש <strong>${user.full_name}</strong> (${user.email}) ביקש למחוק את חשבונו.</p><p>תאריך הבקשה: ${new Date().toLocaleString('he-IL')}</p><p>כדי לאשר את המחיקה, כנס למערכת ועבור לכרטיס המשתמש.</p></div>`,
+      }).catch((err) => console.error('sendgrid error:', err.message));
+    }
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }
@@ -145,6 +168,17 @@ router.patch('/:id', requireAuth, requireAdmin, async (req, res, next) => {
     const user = await usersService.updateAsAdmin(targetId, req.body);
     logAccess({ actorUserId: req.user.id, targetUserId: targetId, action: 'update', ip: req.ip });
     res.json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/:id', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const targetId = Number(req.params.id);
+    logAccess({ actorUserId: req.user.id, targetUserId: targetId, action: 'delete', ip: req.ip });
+    await usersService.approveDeletion(targetId);
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }

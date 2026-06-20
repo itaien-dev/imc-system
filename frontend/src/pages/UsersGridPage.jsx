@@ -99,7 +99,15 @@ export default function UsersGridPage() {
             <tbody>
               {data?.rows.map((u) => (
                 <tr key={u.id} style={{ borderTop: '1px solid #e0e0e0' }}>
-                  <Td><Link to={`/admin/users/${u.id}`}>{u.full_name}</Link></Td>
+                  <Td>
+                    <Link to={`/admin/users/${u.id}`}>{u.full_name}</Link>
+                    {u.deletion_requested_at && (
+                      <span
+                        title={`בקשת מחיקה מ-${new Date(u.deletion_requested_at).toLocaleDateString('he-IL')}`}
+                        style={{ marginRight: 6, fontSize: 13 }}
+                      >🗑️</span>
+                    )}
+                  </Td>
                   <Td><StatusBadge value={u.membership_status} /></Td>
                   <Td>{u.phone || '—'}</Td>
                   <Td>{u.email}</Td>

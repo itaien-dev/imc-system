@@ -20,6 +20,7 @@ const PUBLIC_FIELDS = [
   'created_at',
   'notes',
   'role',
+  'deletion_requested_at',
 ];
 
 const SELF_EDITABLE_FIELDS = ['full_name', 'national_id', 'birth_date', 'phone', 'email', 'address', 'gender'];
@@ -270,4 +271,13 @@ async function create(payload) {
   return attachComputedFields(user);
 }
 
-module.exports = { getById, list, create, updateSelf, updateAsAdmin, exportToCsv, searchLite, getWorkshopHistory };
+async function requestDeletion(userId) {
+  await db('users').where('id', userId).update({ deletion_requested_at: new Date() });
+  return getById(userId);
+}
+
+async function approveDeletion(userId) {
+  await db('users').where('id', userId).delete();
+}
+
+module.exports = { getById, list, create, updateSelf, updateAsAdmin, exportToCsv, searchLite, getWorkshopHistory, requestDeletion, approveDeletion };

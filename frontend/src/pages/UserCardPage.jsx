@@ -30,6 +30,19 @@ export default function UserCardPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => usersApi.deleteUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      navigate('/admin/users');
+    },
+  });
+
+  function handleApproveDeletion() {
+    if (!window.confirm(`האם לאשר מחיקת החשבון של ${user.full_name}? פעולה זו בלתי הפיכה.`)) return;
+    deleteMutation.mutate();
+  }
+
   if (isLoading || !user) return <p>טוען...</p>;
   const current = form || user;
 
@@ -203,6 +216,26 @@ export default function UserCardPage() {
             showRole linkToWorkshop />
         )}
       </div>
+
+      {user.deletion_requested_at && (
+        <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 8, padding: '14px 18px', marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <p style={{ margin: 0, fontWeight: 500, color: '#856404', fontSize: 14 }}>
+              🗑️ המשתמש ביקש למחוק את חשבונו
+            </p>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#856404' }}>
+              תאריך הבקשה: {new Date(user.deletion_requested_at).toLocaleDateString('he-IL')}
+            </p>
+          </div>
+          <button
+            onClick={handleApproveDeletion}
+            disabled={deleteMutation.isPending}
+            style={{ background: '#c0392b', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer', fontWeight: 500, fontSize: 13 }}
+          >
+            אשר מחיקה
+          </button>
+        </div>
+      )}
 
       {showAssignModal && (
         <AssignStaffRoleModal userId={Number(id)} onClose={() => setShowAssignModal(false)} />

@@ -53,6 +53,16 @@ export async function searchUsers(query) {
   return data;
 }
 
+export async function requestDeletion() {
+  const { data } = await apiClient.post('/users/me/request-deletion');
+  return data;
+}
+
+export async function deleteUser(id) {
+  const { data } = await apiClient.delete(`/users/${id}`);
+  return data;
+}
+
 export async function getMyWorkshopHistory() {
   const { data } = await apiClient.get('/users/me/history');
   return data;

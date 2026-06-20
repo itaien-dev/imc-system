@@ -19,6 +19,20 @@ export default function ProfilePage() {
   const [savedMessage, setSavedMessage] = useState('');
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
   const [pwMessage, setPwMessage] = useState({ text: '', error: false });
+  const [deletionMsg, setDeletionMsg] = useState('');
+
+  const deletionMutation = useMutation({
+    mutationFn: usersApi.requestDeletion,
+    onSuccess: () => {
+      setDeletionMsg('בקשת המחיקה שלך התקבלה ותטופל על ידי המנהל בהקדם.');
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+    },
+  });
+
+  function handleRequestDeletion() {
+    if (!window.confirm('האם אתה בטוח שברצונך לבקש מחיקת החשבון? הבקשה תועבר למנהל המערכת לאישור.')) return;
+    deletionMutation.mutate();
+  }
 
   const mutation = useMutation({
     mutationFn: (patch) => usersApi.updateMe(patch),
@@ -224,6 +238,29 @@ export default function ProfilePage() {
             showRole
           />
         )}
+      </div>
+
+      <div style={{ borderTop: '1px solid #e0e0e0', marginTop: 24, paddingTop: 20 }}>
+        {user.deletion_requested_at ? (
+          <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: '#856404' }}>
+            ⏳ בקשת מחיקת החשבון שלך התקבלה ב-{new Date(user.deletion_requested_at).toLocaleDateString('he-IL')} וממתינה לאישור המנהל.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: '#555' }}>מחיקת חשבון</p>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#999' }}>הבקשה תועבר למנהל המערכת לאישור. החשבון לא יימחק באופן מיידי.</p>
+            </div>
+            <button
+              onClick={handleRequestDeletion}
+              disabled={deletionMutation.isPending}
+              style={{ color: '#c0392b', border: '1px solid #c0392b', background: '#fff', padding: '6px 14px', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}
+            >
+              בקשת מחיקת חשבון
+            </button>
+          </div>
+        )}
+        {deletionMsg && <p style={{ fontSize: 13, color: '#856404', marginTop: 8 }}>{deletionMsg}</p>}
       </div>
     </div>
   );
