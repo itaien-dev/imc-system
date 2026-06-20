@@ -2,6 +2,7 @@ const express = require('express');
 const { z } = require('zod');
 const usersService = require('./users.service');
 const { requireAuth, requireAdmin } = require('../../middleware/auth');
+const { logAccess } = require('../../utils/accessLog');
 
 const router = express.Router();
 
@@ -107,6 +108,7 @@ router.get('/export', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const { search, status } = req.query;
     const csv = await usersService.exportToCsv({ search, status });
+    logAccess({ actorUserId: req.user.id, targetUserId: null, action: 'export', ip: req.ip });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="users_export.csv"');
     res.send('\uFEFF' + csv); // BOM so Excel opens UTF-8/Hebrew correctly
@@ -127,8 +129,10 @@ router.get('/search', requireAuth, requireAdmin, async (req, res, next) => {
 
 router.get('/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const user = await usersService.getById(Number(req.params.id));
+    const targetId = Number(req.params.id);
+    const user = await usersService.getById(targetId);
     if (!user) return res.status(404).json({ error: 'User not found' });
+    logAccess({ actorUserId: req.user.id, targetUserId: targetId, action: 'view', ip: req.ip });
     res.json(user);
   } catch (err) {
     next(err);
@@ -137,7 +141,9 @@ router.get('/:id', requireAuth, requireAdmin, async (req, res, next) => {
 
 router.patch('/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const user = await usersService.updateAsAdmin(Number(req.params.id), req.body);
+    const targetId = Number(req.params.id);
+    const user = await usersService.updateAsAdmin(targetId, req.body);
+    logAccess({ actorUserId: req.user.id, targetUserId: targetId, action: 'update', ip: req.ip });
     res.json(user);
   } catch (err) {
     next(err);

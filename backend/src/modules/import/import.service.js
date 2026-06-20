@@ -1,5 +1,6 @@
 const { parse } = require('csv-parse/sync');
 const db = require('../../db/connection');
+const { encryptValue } = require('../../utils/encryption');
 
 const GENDER_MAP = { זכר: 'male', נקבה: 'female', male: 'male', female: 'female' };
 
@@ -88,7 +89,7 @@ async function commitUsers(rows) {
         address:     row.city        || null,
         birth_date:  row.birth_date  || null,
         notes:       row.category    || null,
-        national_id:            row.national_id       || null,
+        national_id:            row.national_id ? encryptValue(row.national_id) : null,
         membership_expiry_date: row.membership_expiry || null,
       };
 

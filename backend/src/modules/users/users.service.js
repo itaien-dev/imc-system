@@ -1,14 +1,16 @@
 const db = require('../../db/connection');
+const { encryptedColumn, encryptValue } = require('../../utils/encryption');
 const {
   computeMembershipStatus,
   computeAge,
   getUserComputedFieldsBulk,
 } = require('../../utils/computedFields');
 
+// national_id is excluded here on purpose — it's encrypted at rest and only
+// decrypted explicitly via encryptedColumn() for screens that need it.
 const PUBLIC_FIELDS = [
   'id',
   'full_name',
-  'national_id',
   'birth_date',
   'phone',
   'email',
@@ -23,7 +25,10 @@ const PUBLIC_FIELDS = [
 const SELF_EDITABLE_FIELDS = ['full_name', 'national_id', 'birth_date', 'phone', 'email', 'address', 'gender'];
 
 async function getById(id) {
-  const user = await db('users').select(PUBLIC_FIELDS).where('id', id).first();
+  const user = await db('users')
+    .select(...PUBLIC_FIELDS, encryptedColumn())
+    .where('id', id)
+    .first();
   if (!user) return null;
   return attachComputedFields(user);
 }
@@ -72,18 +77,14 @@ const MEMBERSHIP_STATUS_SQL = `
   END
 `;
 
-const STAFF_COUNT_SQL = `(
-  SELECT COUNT(*) FROM user_workshop_links
-  WHERE user_workshop_links.user_id = users.id
-  AND user_workshop_links.role IN ('facilitator','coordinator','dj','chaperone','translator')
-)`;
-
 const ALLOWED_USER_SORT = ['full_name', 'age', 'assist_count', 'student_workshop', 'last_workshop', 'staff_count', 'membership_status'];
 
 async function list({ search, status, page = 1, pageSize = 20, sortBy = 'full_name', sortDir = 'asc' }) {
   const dir = sortDir === 'desc' ? 'desc' : 'asc';
   const col = ALLOWED_USER_SORT.includes(sortBy) ? sortBy : 'full_name';
 
+  // Note: search does not match against national_id (it stays encrypted and
+  // unindexed on purpose — searching it would require decrypting every row).
   let query = db('users').select(PUBLIC_FIELDS);
 
   if (search) {
@@ -112,7 +113,6 @@ async function list({ search, status, page = 1, pageSize = 20, sortBy = 'full_na
   const userIds = dbRows.map((r) => r.id);
   const computedMap = await getUserComputedFieldsBulk(userIds);
 
-  // Fetch staff_count for all users in one query
   const staffCounts = await db('user_workshop_links')
     .select('user_id')
     .count('* as cnt')
@@ -154,7 +154,9 @@ async function list({ search, status, page = 1, pageSize = 20, sortBy = 'full_na
 async function updateSelf(userId, patch) {
   const filteredPatch = {};
   for (const key of SELF_EDITABLE_FIELDS) {
-    if (key in patch) filteredPatch[key] = patch[key];
+    if (key in patch) {
+      filteredPatch[key] = key === 'national_id' ? encryptValue(patch[key]) : patch[key];
+    }
   }
   const blockedFields = Object.keys(patch).filter((k) => !SELF_EDITABLE_FIELDS.includes(k));
   if (Object.keys(filteredPatch).length > 0) {
@@ -167,26 +169,22 @@ async function updateAsAdmin(userId, patch) {
   const allowedFields = [...SELF_EDITABLE_FIELDS, 'membership_expiry_date', 'notes', 'role'];
   const filteredPatch = {};
   for (const key of allowedFields) {
-    if (key in patch) filteredPatch[key] = patch[key];
+    if (key in patch) {
+      filteredPatch[key] = key === 'national_id' ? encryptValue(patch[key]) : patch[key];
+    }
   }
   if (Object.keys(filteredPatch).length > 0) {
     await db('users').where('id', userId).update(filteredPatch);
   }
 
-  // Update recruiter link if recruiter_email provided
   if ('recruiter_email' in patch) {
-    // Remove existing recruiter link
     await db('user_recruitments').where('recruit_id', userId).delete();
-
     if (patch.recruiter_email) {
       const recruiter = await db('users')
         .where('email', patch.recruiter_email.toLowerCase().trim())
         .first();
       if (recruiter) {
-        await db('user_recruitments').insert({
-          recruiter_id: recruiter.id,
-          recruit_id: userId,
-        });
+        await db('user_recruitments').insert({ recruiter_id: recruiter.id, recruit_id: userId });
       }
     }
   }
@@ -258,7 +256,7 @@ async function create(payload) {
   const [user] = await db('users')
     .insert({
       full_name: payload.full_name,
-      national_id: payload.national_id || null,
+      national_id: payload.national_id ? encryptValue(payload.national_id) : null,
       birth_date: payload.birth_date || null,
       phone: payload.phone || null,
       email: payload.email,
