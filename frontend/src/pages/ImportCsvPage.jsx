@@ -116,7 +116,8 @@ export default function ImportCsvPage() {
                           <Td>{r.city || '—'}</Td>
                           <Td>{r.birth_date || '—'}</Td>
                           <Td>{r.student_workshop || '—'}</Td>
-                          <Td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <Td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                              title={r.assist_workshops || ''}>
                             {r.assist_workshops || '—'}
                           </Td>
                           <Td>{actionLabel(r.action)}</Td>

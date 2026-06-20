@@ -121,26 +121,53 @@ async function getParticipants(workshopId, role) {
 
   // Acceptance criterion + rounds-since-last only make sense for assistants.
   if (role === 'assistant') {
-    const enriched = [];
-    for (const row of rows) {
-      const criterion = await computeAcceptanceCriterion({ userId: row.user_id, workshopId });
+    const userIds = rows.map((r) => r.user_id);
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-      const lastAssist = await db('user_workshop_links')
-        .join('workshops', 'workshops.id', 'user_workshop_links.workshop_id')
-        .select('workshops.cycle_number')
-        .where('user_workshop_links.user_id', row.user_id)
-        .where('user_workshop_links.role', 'assistant')
-        .whereNot('user_workshop_links.workshop_id', workshopId)
-        .orderBy('workshops.start_date', 'desc')
-        .first();
+    // Bulk: all prior assist records for these users (excluding current workshop)
+    const priorAssists = await db('user_workshop_links')
+      .join('workshops', 'workshops.id', 'user_workshop_links.workshop_id')
+      .select('user_workshop_links.user_id', 'workshops.start_date', 'workshops.cycle_number')
+      .where('user_workshop_links.role', 'assistant')
+      .whereNot('user_workshop_links.workshop_id', workshopId)
+      .whereIn('user_workshop_links.user_id', userIds);
 
-      enriched.push({
-        ...row,
-        acceptance_criterion: criterion,
-        rounds_since_last: computeRoundsSinceLast(workshop.cycle_number, lastAssist?.cycle_number ?? null),
-      });
+    // Bulk: recruitments in the last year for these users
+    const recentRecruitments = await db('user_recruitments')
+      .select('recruiter_id')
+      .whereIn('recruiter_id', userIds)
+      .where('recruited_at', '>=', oneYearAgo);
+    const recruiterSet = new Set(recentRecruitments.map((r) => r.recruiter_id));
+
+    // Group prior assists by user_id
+    const assistsByUser = new Map();
+    for (const a of priorAssists) {
+      if (!assistsByUser.has(a.user_id)) assistsByUser.set(a.user_id, []);
+      assistsByUser.get(a.user_id).push(a);
     }
-    return enriched;
+
+    function deriveAcceptanceCriterion(userId) {
+      const assists = assistsByUser.get(userId) || [];
+      if (assists.length === 0) return 'אסיסט ראשון';
+      if (recruiterSet.has(userId)) return 'מגוייסים';
+      const hasRecent = assists.some((a) => new Date(a.start_date) >= oneYearAgo);
+      if (!hasRecent) return 'לא השתתף מעל שנה';
+      return 'איזונים';
+    }
+
+    function deriveLastAssistCycle(userId) {
+      const assists = assistsByUser.get(userId) || [];
+      if (assists.length === 0) return null;
+      assists.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+      return assists[0].cycle_number;
+    }
+
+    return rows.map((row) => ({
+      ...row,
+      acceptance_criterion: deriveAcceptanceCriterion(row.user_id),
+      rounds_since_last: computeRoundsSinceLast(workshop.cycle_number, deriveLastAssistCycle(row.user_id)),
+    }));
   }
 
   return rows;

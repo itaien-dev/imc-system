@@ -75,90 +75,87 @@ async function commitUsers(rows) {
   let created = 0;
   let updated = 0;
 
-  for (const row of rows) {
-    if (row.action === 'skip' || !row.email) continue;
+  await db.transaction(async (trx) => {
+    for (const row of rows) {
+      if (row.action === 'skip' || !row.email) continue;
 
-    const existing = await db('users').where('email', row.email).first();
+      const existing = await trx('users').where('email', row.email).first();
 
-    const userPayload = {
-      full_name:   row.full_name  || undefined,
-      phone:       row.phone      || null,
-      gender:      row.gender     || null,
-      address:     row.city        || null,
-      birth_date:  row.birth_date  || null,
-      notes:       row.category    || null,
-      national_id:            row.national_id       || null,
-      membership_expiry_date: row.membership_expiry || null,
-    };
+      const userPayload = {
+        full_name:   row.full_name  || undefined,
+        phone:       row.phone      || null,
+        gender:      row.gender     || null,
+        address:     row.city        || null,
+        birth_date:  row.birth_date  || null,
+        notes:       row.category    || null,
+        national_id:            row.national_id       || null,
+        membership_expiry_date: row.membership_expiry || null,
+      };
 
-    let userId;
-    if (existing) {
-      // Only overwrite non-empty values
-      const updatePayload = Object.fromEntries(
-        Object.entries(userPayload).filter(([, v]) => v !== undefined)
-      );
-      await db('users').where('id', existing.id).update(updatePayload);
-      userId = existing.id;
-      updated += 1;
-    } else {
-      const [insertedId] = await db('users')
-        .insert({ ...userPayload, email: row.email, full_name: row.full_name })
-        .returning('id');
-      userId = insertedId?.id ?? insertedId;
-      created += 1;
-    }
+      let userId;
+      if (existing) {
+        const updatePayload = Object.fromEntries(
+          Object.entries(userPayload).filter(([, v]) => v !== undefined)
+        );
+        await trx('users').where('id', existing.id).update(updatePayload);
+        userId = existing.id;
+        updated += 1;
+      } else {
+        const [insertedId] = await trx('users')
+          .insert({ ...userPayload, email: row.email, full_name: row.full_name })
+          .returning('id');
+        userId = insertedId?.id ?? insertedId;
+        created += 1;
+      }
 
-    // Link recruiter if provided
-    if (row.recruiter_email) {
-      const recruiter = await db('users').where('email', row.recruiter_email.toLowerCase().trim()).first();
-      if (recruiter) {
-        const existingLink = await db('user_recruitments')
-          .where({ recruiter_id: recruiter.id, recruit_id: userId })
-          .first();
-        if (!existingLink) {
-          await db('user_recruitments').insert({ recruiter_id: recruiter.id, recruit_id: userId });
+      if (row.recruiter_email) {
+        const recruiter = await trx('users').where('email', row.recruiter_email.toLowerCase().trim()).first();
+        if (recruiter) {
+          const existingLink = await trx('user_recruitments')
+            .where({ recruiter_id: recruiter.id, recruit_id: userId })
+            .first();
+          if (!existingLink) {
+            await trx('user_recruitments').insert({ recruiter_id: recruiter.id, recruit_id: userId });
+          }
+        }
+      }
+
+      if (row.student_workshop) {
+        await upsertWorkshopLink(userId, row.student_workshop, 'student', trx);
+      }
+
+      if (row.assist_workshops) {
+        const assistList = row.assist_workshops.split(',').map((s) => s.trim()).filter(Boolean);
+        for (const wsCode of assistList) {
+          await upsertWorkshopLink(userId, wsCode, 'assistant', trx);
         }
       }
     }
-
-    // Upsert student workshop link
-    if (row.student_workshop) {
-      await upsertWorkshopLink(userId, row.student_workshop, 'student');
-    }
-
-    // Upsert assistant workshop links
-    if (row.assist_workshops) {
-      const assistList = row.assist_workshops.split(',').map((s) => s.trim()).filter(Boolean);
-      for (const wsCode of assistList) {
-        await upsertWorkshopLink(userId, wsCode, 'assistant');
-      }
-    }
-  }
+  });
 
   return { created, updated };
 }
 
 /** Find or create a workshop by its code (e.g. "IMC321"), then upsert the link. */
-async function upsertWorkshopLink(userId, workshopCode, role) {
-  // Extract numeric part: "IMC321" → 321
+async function upsertWorkshopLink(userId, workshopCode, role, trx = db) {
   const match = workshopCode.match(/(\d+)/);
   if (!match) return;
   const workshopNumber = parseInt(match[1], 10);
 
-  let workshop = await db('workshops').where('workshop_number', workshopNumber).first();
+  let workshop = await trx('workshops').where('workshop_number', workshopNumber).first();
   if (!workshop) {
-    const [inserted] = await db('workshops')
+    const [inserted] = await trx('workshops')
       .insert({ workshop_number: workshopNumber, cycle_number: 0, track: 'IMC' })
       .returning('id');
     workshop = { id: inserted?.id ?? inserted };
   }
 
-  const existing = await db('user_workshop_links')
+  const existing = await trx('user_workshop_links')
     .where({ user_id: userId, workshop_id: workshop.id, role })
     .first();
 
   if (!existing) {
-    await db('user_workshop_links').insert({
+    await trx('user_workshop_links').insert({
       user_id: userId,
       workshop_id: workshop.id,
       role,
