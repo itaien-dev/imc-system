@@ -13,7 +13,7 @@ const db = require('../db/connection');
 function encryptedColumn(rawColumnExpr = 'national_id') {
   return db.raw(
     `CASE WHEN ${rawColumnExpr} IS NULL THEN NULL
-     ELSE pgp_sym_decrypt(${rawColumnExpr}, ?) END as national_id`,
+     ELSE pgp_sym_decrypt(${rawColumnExpr}, ?)::text END as national_id`,
     [process.env.DB_ENCRYPTION_KEY]
   );
 }
