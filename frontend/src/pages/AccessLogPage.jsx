@@ -149,6 +149,16 @@ export default function AccessLogPage() {
   );
 }
 
+function formatChangeValue(val) {
+  if (val === null || val === undefined || val === '') return '—';
+  // ISO date string (date only or with time)
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}(T|$)/.test(val)) {
+    const d = new Date(val);
+    if (!isNaN(d)) return d.toLocaleDateString('he-IL');
+  }
+  return String(val);
+}
+
 function ChangesCell({ changes }) {
   if (!changes || typeof changes !== 'object' || Object.keys(changes).length === 0) return <span style={{ color: '#ccc' }}>—</span>;
   return (
@@ -156,9 +166,9 @@ function ChangesCell({ changes }) {
       {Object.entries(changes).map(([field, { old: oldVal, new: newVal }]) => (
         <div key={field} style={{ fontSize: 12 }}>
           <span style={{ color: '#888', marginLeft: 4 }}>{FIELD_LABELS[field] || field}:</span>
-          <span style={{ color: '#c0392b', textDecoration: 'line-through', marginLeft: 4 }}>{oldVal || '—'}</span>
+          <span style={{ color: '#c0392b', textDecoration: 'line-through', marginLeft: 4 }}>{formatChangeValue(oldVal)}</span>
           <span style={{ color: '#555' }}>← </span>
-          <span style={{ color: '#1e7e34' }}>{newVal || '—'}</span>
+          <span style={{ color: '#1e7e34' }}>{formatChangeValue(newVal)}</span>
         </div>
       ))}
     </div>
