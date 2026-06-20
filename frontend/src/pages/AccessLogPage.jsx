@@ -113,7 +113,7 @@ export default function AccessLogPage() {
                   <Td>
                     {row.target_id && <Link to={`/admin/users/${row.target_id}`}>{row.target_name}</Link>}
                     {row.target_id && row.target_workshop_id && <br />}
-                    {row.target_workshop_id && <Link to={`/admin/workshops/${row.target_workshop_id}`}>סדנה #{row.target_workshop_id}</Link>}
+                    {row.target_workshop_id && <Link to={`/admin/workshops/${row.target_workshop_id}`}>סדנה #{row.target_workshop_number ?? row.target_workshop_id}</Link>}
                     {!row.target_id && !row.target_workshop_id && '—'}
                   </Td>
                   <Td>

@@ -13,6 +13,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res, next) => {
     let query = db('access_log as al')
       .leftJoin('users as actor', 'actor.id', 'al.actor_user_id')
       .leftJoin('users as target', 'target.id', 'al.target_user_id')
+      .leftJoin('workshops as ws', 'ws.id', 'al.target_workshop_id')
       .select(
         'al.id',
         'al.created_at',
@@ -21,6 +22,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res, next) => {
         'al.changes',
         'al.description',
         'al.target_workshop_id',
+        'ws.workshop_number as target_workshop_number',
         'actor.full_name as actor_name',
         'actor.id as actor_id',
         'target.full_name as target_name',
