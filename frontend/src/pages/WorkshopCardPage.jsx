@@ -13,7 +13,18 @@ export default function WorkshopCardPage() {
   const workshopId = Number(id);
   const [tab, setTab] = useState('student');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [form, setForm] = useState(null);
   const queryClient = useQueryClient();
+
+  const updateMutation = useMutation({
+    mutationFn: (payload) => workshopsApi.updateWorkshop(workshopId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workshop', workshopId] });
+      setEditMode(false);
+      setForm(null);
+    },
+  });
 
   const removeMutation = useMutation({
     mutationFn: (linkId) => workshopsApi.removeParticipant(workshopId, linkId),
@@ -77,6 +88,7 @@ export default function WorkshopCardPage() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => { setForm({ ...workshop, start_date: workshop.start_date?.slice(0,10), end_date: workshop.end_date?.slice(0,10), publish_start_date: workshop.publish_start_date?.slice(0,10), publish_end_date: workshop.publish_end_date?.slice(0,10), feedback_date: workshop.feedback_date?.slice(0,10) || '' }); setEditMode(true); }}>עריכה</button>
             <Link to={`/admin/workshops/${workshopId}/close`}>
               <button>סגירת סדנה</button>
             </Link>
@@ -84,20 +96,49 @@ export default function WorkshopCardPage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 16 }}>
-          <Stat label="סטודנטים" value={`${workshop.student_count} / 19`} />
-          <Stat label="אסיסטנטים" value={`${workshop.assistant_count} / 40`} />
-          <Stat label="תאריך משוב" value={workshop.feedback_date ? new Date(workshop.feedback_date).toLocaleDateString('he-IL') : '—'} />
-          <Stat
-            label="תאריכי פרסום"
-            value={
-              <span dir="ltr">
-                {new Date(workshop.publish_start_date).toLocaleDateString('he-IL')}–
-                {new Date(workshop.publish_end_date).toLocaleDateString('he-IL')}
-              </span>
-            }
-          />
-        </div>
+        {editMode && form ? (
+          <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <WField label="מספר סדנה" type="number" value={form.workshop_number} onChange={v => setForm({...form, workshop_number: Number(v)})} />
+            <WField label="סבב" type="number" value={form.cycle_number} onChange={v => setForm({...form, cycle_number: Number(v)})} />
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>שיוך</label>
+              <select value={form.track} onChange={e => setForm({...form, track: e.target.value})} style={{ width: '100%', padding: 8, direction: 'rtl' }}>
+                <option value="adults">בוגרים</option>
+                <option value="youth">נוער</option>
+                <option value="general">כללי</option>
+              </select>
+            </div>
+            <WField label="תאריך משוב" type="date" value={form.feedback_date} onChange={v => setForm({...form, feedback_date: v})} />
+            <WField label="תאריך התחלה" type="date" value={form.start_date} onChange={v => setForm({...form, start_date: v})} />
+            <WField label="תאריך סיום" type="date" value={form.end_date} onChange={v => setForm({...form, end_date: v})} />
+            <WField label="פרסום מ-" type="date" value={form.publish_start_date} onChange={v => setForm({...form, publish_start_date: v})} />
+            <WField label="פרסום עד-" type="date" value={form.publish_end_date} onChange={v => setForm({...form, publish_end_date: v})} />
+            <WField label='דוא"ל' value={form.email || ''} onChange={v => setForm({...form, email: v})} />
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>הערות</label>
+              <textarea value={form.notes || ''} onChange={e => setForm({...form, notes: e.target.value})} rows={2} style={{ width: '100%', padding: 8, direction: 'rtl', fontFamily: 'inherit' }} />
+            </div>
+            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => { setEditMode(false); setForm(null); }}>ביטול</button>
+              <button onClick={() => updateMutation.mutate(form)} disabled={updateMutation.isPending} style={{ fontWeight: 500 }}>שמירה</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 16 }}>
+            <Stat label="סטודנטים" value={`${workshop.student_count} / 19`} />
+            <Stat label="אסיסטנטים" value={`${workshop.assistant_count} / 40`} />
+            <Stat label="תאריך משוב" value={workshop.feedback_date ? new Date(workshop.feedback_date).toLocaleDateString('he-IL') : '—'} />
+            <Stat
+              label="תאריכי פרסום"
+              value={
+                <span dir="ltr">
+                  {new Date(workshop.publish_start_date).toLocaleDateString('he-IL')}–
+                  {new Date(workshop.publish_end_date).toLocaleDateString('he-IL')}
+                </span>
+              }
+            />
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -196,6 +237,16 @@ function TabButton({ active, onClick, children }) {
     >
       {children}
     </button>
+  );
+}
+
+function WField({ label, value, onChange, type = 'text' }) {
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>{label}</label>
+      <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)}
+        style={{ width: '100%', padding: 8, direction: 'rtl' }} />
+    </div>
   );
 }
 

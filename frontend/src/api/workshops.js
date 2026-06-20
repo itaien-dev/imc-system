@@ -15,6 +15,11 @@ export async function getWorkshop(id) {
   return data;
 }
 
+export async function updateWorkshop(id, payload) {
+  const { data } = await apiClient.patch(`/workshops/${id}`, payload);
+  return data;
+}
+
 export async function getParticipants(workshopId, role) {
   const { data } = await apiClient.get(`/workshops/${workshopId}/participants`, { params: { role } });
   return data;

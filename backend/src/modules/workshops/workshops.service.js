@@ -50,6 +50,25 @@ async function list({ search, track, page = 1, pageSize = 20, sortBy = 'workshop
 }
 
 /** Creates a workshop manually (admin form), as opposed to via CSV import. */
+async function update(id, payload) {
+  const [workshop] = await db('workshops')
+    .where('id', id)
+    .update({
+      workshop_number: payload.workshop_number,
+      cycle_number: payload.cycle_number,
+      track: payload.track,
+      start_date: payload.start_date,
+      end_date: payload.end_date,
+      publish_start_date: payload.publish_start_date,
+      publish_end_date: payload.publish_end_date,
+      feedback_date: payload.feedback_date || null,
+      email: payload.email || null,
+      notes: payload.notes || null,
+    })
+    .returning('*');
+  return workshop;
+}
+
 async function create(payload) {
   const [workshop] = await db('workshops')
     .insert({
@@ -320,6 +339,7 @@ async function removeParticipant(workshopId, linkId) {
 module.exports = {
   list,
   create,
+  update,
   getById,
   getParticipants,
   exportParticipantsToCsv,

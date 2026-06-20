@@ -61,6 +61,17 @@ router.get('/:id', requireAuth, requireAdmin, async (req, res, next) => {
   }
 });
 
+router.patch('/:id', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const data = createWorkshopSchema.parse(req.body);
+    const workshop = await workshopsService.update(Number(req.params.id), data);
+    if (!workshop) return res.status(404).json({ error: 'Workshop not found' });
+    res.json(workshop);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/:id/participants', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const { role } = req.query; // 'student' | 'assistant' | 'staff'
