@@ -2,6 +2,7 @@ const express = require('express');
 const { z } = require('zod');
 const workshopsService = require('./workshops.service');
 const { requireAuth, requireAdmin } = require('../../middleware/auth');
+const { logAccess } = require('../../utils/accessLog');
 
 const router = express.Router();
 
@@ -45,6 +46,7 @@ router.post('/', requireAuth, requireAdmin, async (req, res, next) => {
       return res.status(400).json({ error: 'תאריך תום הפרסום חייב להיות אחרי תאריך תחילת הפרסום' });
     }
     const workshop = await workshopsService.create(data);
+    logAccess({ actorUserId: req.user.id, targetWorkshopId: workshop.id, action: 'create', ip: req.ip, description: `יצירת סדנה #${workshop.workshop_number}` });
     res.status(201).json(workshop);
   } catch (err) {
     next(err);
@@ -63,9 +65,19 @@ router.get('/:id', requireAuth, requireAdmin, async (req, res, next) => {
 
 router.patch('/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
+    const workshopId = Number(req.params.id);
     const data = createWorkshopSchema.parse(req.body);
-    const workshop = await workshopsService.update(Number(req.params.id), data);
+    const before = await workshopsService.getById(workshopId);
+    const workshop = await workshopsService.update(workshopId, data);
     if (!workshop) return res.status(404).json({ error: 'Workshop not found' });
+    const TRACKED = ['workshop_number', 'cycle_number', 'track', 'start_date', 'end_date', 'publish_start_date', 'publish_end_date', 'feedback_date', 'email', 'notes'];
+    const changes = {};
+    for (const field of TRACKED) {
+      const oldVal = String(before?.[field] ?? '');
+      const newVal = String(data[field] ?? '');
+      if (oldVal !== newVal) changes[field] = { old: before?.[field] ?? null, new: data[field] ?? null };
+    }
+    logAccess({ actorUserId: req.user.id, targetWorkshopId: workshopId, action: 'update', ip: req.ip, changes: Object.keys(changes).length ? changes : undefined, description: `עדכון סדנה #${workshop.workshop_number}` });
     res.json(workshop);
   } catch (err) {
     next(err);
@@ -85,9 +97,11 @@ router.get('/:id/participants', requireAuth, requireAdmin, async (req, res, next
 
 router.get('/:id/export', requireAuth, requireAdmin, async (req, res, next) => {
   try {
+    const workshopId = Number(req.params.id);
     const { role } = req.query;
-    const csv = await workshopsService.exportParticipantsToCsv(Number(req.params.id), role);
+    const csv = await workshopsService.exportParticipantsToCsv(workshopId, role);
     if (csv === null) return res.status(404).json({ error: 'Workshop not found' });
+    logAccess({ actorUserId: req.user.id, targetWorkshopId: workshopId, action: 'export', ip: req.ip, description: `\u05D9\u05D9\u05E6\u05D5\u05D0 \u05E0\u05E8\u05E9\u05DE\u05D9\u05DD \u05DE\u05E1\u05D3\u05E0\u05D4 #${workshopId}` });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="workshop_${req.params.id}_${role || 'all'}.csv"`);
     res.send('\uFEFF' + csv);
@@ -103,12 +117,10 @@ const addParticipantSchema = z.object({
 
 router.post('/:id/participants', requireAuth, requireAdmin, async (req, res, next) => {
   try {
+    const workshopId = Number(req.params.id);
     const { userId, role } = addParticipantSchema.parse(req.body);
-    const link = await workshopsService.addParticipantManually({
-      workshopId: Number(req.params.id),
-      userId,
-      role,
-    });
+    const link = await workshopsService.addParticipantManually({ workshopId, userId, role });
+    logAccess({ actorUserId: req.user.id, targetWorkshopId: workshopId, targetUserId: userId, action: 'create', ip: req.ip, description: `הוספת משתתף לסדנה #${workshopId} (תפקיד: ${role})` });
     res.status(201).json(link);
   } catch (err) {
     next(err);
@@ -117,11 +129,10 @@ router.post('/:id/participants', requireAuth, requireAdmin, async (req, res, nex
 
 router.delete('/:id/participants/:linkId', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const deleted = await workshopsService.removeParticipant(
-      Number(req.params.id),
-      Number(req.params.linkId),
-    );
+    const workshopId = Number(req.params.id);
+    const deleted = await workshopsService.removeParticipant(workshopId, Number(req.params.linkId));
     if (!deleted) return res.status(404).json({ error: 'Participant link not found' });
+    logAccess({ actorUserId: req.user.id, targetWorkshopId: workshopId, action: 'delete', ip: req.ip, description: `הסרת משתתף מסדנה #${workshopId}` });
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -144,8 +155,10 @@ const closeWorkshopSchema = z.object({
 
 router.post('/:id/close', requireAuth, requireAdmin, async (req, res, next) => {
   try {
+    const workshopId = Number(req.params.id);
     const body = closeWorkshopSchema.parse(req.body);
-    const result = await workshopsService.closeWorkshop(Number(req.params.id), body);
+    const result = await workshopsService.closeWorkshop(workshopId, body);
+    logAccess({ actorUserId: req.user.id, targetWorkshopId: workshopId, action: 'update', ip: req.ip, description: `סגירת סדנה #${workshopId}` });
     res.json(result);
   } catch (err) {
     next(err);

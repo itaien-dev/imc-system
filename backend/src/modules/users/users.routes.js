@@ -48,8 +48,19 @@ router.patch('/me', requireAuth, async (req, res, next) => {
     if (!parseResult.success) {
       return res.status(400).json({ error: parseResult.error.flatten() });
     }
+    const before = await usersService.getById(req.user.id);
     const result = await usersService.updateSelf(req.user.id, parseResult.data);
     const updatedUser = await usersService.getById(req.user.id);
+    const TRACKED = ['full_name', 'national_id', 'birth_date', 'phone', 'email', 'address', 'gender'];
+    const changes = {};
+    for (const field of TRACKED) {
+      const oldVal = before?.[field] ?? null;
+      const newVal = parseResult.data[field] ?? null;
+      if (newVal !== undefined && String(oldVal ?? '') !== String(newVal ?? '')) {
+        changes[field] = { old: oldVal, new: newVal };
+      }
+    }
+    logAccess({ actorUserId: req.user.id, targetUserId: req.user.id, action: 'update', ip: req.ip, changes: Object.keys(changes).length ? changes : undefined, description: 'עדכון פרופיל אישי' });
     res.json({ ...result, user: updatedUser });
   } catch (err) {
     next(err);
@@ -121,6 +132,7 @@ router.post('/', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const data = createUserSchema.parse(req.body);
     const user = await usersService.create(data);
+    logAccess({ actorUserId: req.user.id, targetUserId: user.id, action: 'create', ip: req.ip, description: `יצירת משתמש: ${user.full_name}` });
     res.status(201).json(user);
   } catch (err) {
     next(err);

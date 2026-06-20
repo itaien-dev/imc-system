@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const importService = require('./import.service');
 const { requireAuth, requireAdmin } = require('../../middleware/auth');
+const { logAccess } = require('../../utils/accessLog');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -21,6 +22,7 @@ router.post('/users/commit', requireAuth, requireAdmin, async (req, res, next) =
     const { rows } = req.body;
     if (!Array.isArray(rows)) return res.status(400).json({ error: 'rows must be an array' });
     const result = await importService.commitUsers(rows);
+    logAccess({ actorUserId: req.user.id, action: 'import', ip: req.ip, description: `ייבוא CSV משתמשים: ${rows.length} שורות (${result.created} חדשים, ${result.updated} מעודכנים)` });
     res.json(result);
   } catch (err) {
     next(err);
@@ -42,6 +44,7 @@ router.post('/workshops/commit', requireAuth, requireAdmin, async (req, res, nex
     const { rows } = req.body;
     if (!Array.isArray(rows)) return res.status(400).json({ error: 'rows must be an array' });
     const result = await importService.commitWorkshops(rows);
+    logAccess({ actorUserId: req.user.id, action: 'import', ip: req.ip, description: `ייבוא CSV סדנאות: ${rows.length} שורות` });
     res.json(result);
   } catch (err) {
     next(err);

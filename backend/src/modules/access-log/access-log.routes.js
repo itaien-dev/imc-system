@@ -19,6 +19,8 @@ router.get('/', requireAuth, requireAdmin, async (req, res, next) => {
         'al.action',
         'al.ip_address',
         'al.changes',
+        'al.description',
+        'al.target_workshop_id',
         'actor.full_name as actor_name',
         'actor.id as actor_id',
         'target.full_name as target_name',

@@ -8,6 +8,8 @@ const ACTION_LABELS = {
   update: 'עדכון',
   delete: 'מחיקה',
   export: 'ייצוא',
+  create: 'יצירה',
+  import: 'ייבוא',
 };
 
 const ACTION_COLORS = {
@@ -15,6 +17,8 @@ const ACTION_COLORS = {
   update: '#b45309',
   delete: '#c0392b',
   export: '#5b5b5b',
+  create: '#1e7e34',
+  import: '#6f42c1',
 };
 
 const FIELD_LABELS = {
@@ -59,9 +63,11 @@ export default function AccessLogPage() {
         >
           <option value="">כל הפעולות</option>
           <option value="view">צפייה</option>
+          <option value="create">יצירה</option>
           <option value="update">עדכון</option>
           <option value="delete">מחיקה</option>
           <option value="export">ייצוא</option>
+          <option value="import">ייבוא</option>
         </select>
       </div>
 
@@ -75,8 +81,8 @@ export default function AccessLogPage() {
                 <Th>תאריך ושעה</Th>
                 <Th>פעולה</Th>
                 <Th>מבצע</Th>
-                <Th>משתמש שנצפה/עודכן</Th>
-                <Th>שינויים</Th>
+                <Th>אובייקט</Th>
+                <Th>תיאור / שינויים</Th>
                 <Th>IP</Th>
               </tr>
             </thead>
@@ -105,11 +111,13 @@ export default function AccessLogPage() {
                       : '—'}
                   </Td>
                   <Td>
-                    {row.target_id
-                      ? <Link to={`/admin/users/${row.target_id}`}>{row.target_name}</Link>
-                      : '—'}
+                    {row.target_id && <Link to={`/admin/users/${row.target_id}`}>{row.target_name}</Link>}
+                    {row.target_id && row.target_workshop_id && <br />}
+                    {row.target_workshop_id && <Link to={`/admin/workshops/${row.target_workshop_id}`}>סדנה #{row.target_workshop_id}</Link>}
+                    {!row.target_id && !row.target_workshop_id && '—'}
                   </Td>
                   <Td>
+                    {row.description && <div style={{ fontSize: 12, color: '#555', marginBottom: row.changes ? 6 : 0 }}>{row.description}</div>}
                     <ChangesCell changes={row.changes} />
                   </Td>
                   <Td style={{ color: '#999', fontSize: 12 }}>{row.ip_address || '—'}</Td>
