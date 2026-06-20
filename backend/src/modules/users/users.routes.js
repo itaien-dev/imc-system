@@ -165,8 +165,18 @@ router.get('/:id', requireAuth, requireAdmin, async (req, res, next) => {
 router.patch('/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const targetId = Number(req.params.id);
+    const before = await usersService.getById(targetId);
     const user = await usersService.updateAsAdmin(targetId, req.body);
-    logAccess({ actorUserId: req.user.id, targetUserId: targetId, action: 'update', ip: req.ip });
+    const TRACKED = ['full_name', 'national_id', 'birth_date', 'phone', 'email', 'address', 'gender', 'membership_expiry_date', 'notes', 'role'];
+    const changes = {};
+    for (const field of TRACKED) {
+      const oldVal = before?.[field] ?? null;
+      const newVal = req.body[field] ?? null;
+      if (String(oldVal ?? '') !== String(newVal ?? '')) {
+        changes[field] = { old: oldVal, new: newVal };
+      }
+    }
+    logAccess({ actorUserId: req.user.id, targetUserId: targetId, action: 'update', ip: req.ip, changes: Object.keys(changes).length ? changes : undefined });
     res.json(user);
   } catch (err) {
     next(err);

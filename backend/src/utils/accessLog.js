@@ -11,13 +11,14 @@ const db = require('../db/connection');
  * @param {'view'|'update'|'delete'|'export'} params.action
  * @param {string} [params.ip]
  */
-async function logAccess({ actorUserId, targetUserId, action, ip }) {
+async function logAccess({ actorUserId, targetUserId, action, ip, changes }) {
   try {
     await db('access_log').insert({
       actor_user_id: actorUserId ?? null,
       target_user_id: targetUserId,
       action,
       ip_address: ip ?? null,
+      changes: changes ? JSON.stringify(changes) : null,
     });
   } catch (err) {
     // Never let logging break the actual request

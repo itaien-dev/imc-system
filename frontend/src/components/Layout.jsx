@@ -30,6 +30,7 @@ export default function Layout() {
               <Link to="/admin/users">משתמשים</Link>
               <Link to="/admin/workshops">סדנאות</Link>
               <Link to="/admin/import">קליטת CSV</Link>
+              <Link to="/admin/access-log">לוג גישה</Link>
             </>
           )}
         </div>

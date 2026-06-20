@@ -8,6 +8,7 @@ const usersRoutes = require('./modules/users/users.routes');
 const workshopsRoutes = require('./modules/workshops/workshops.routes');
 const publicRoutes = require('./modules/public/public.routes');
 const importRoutes = require('./modules/import/import.routes');
+const accessLogRoutes = require('./modules/access-log/access-log.routes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -27,6 +28,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/workshops', workshopsRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/access-log', accessLogRoutes);
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 app.use(errorHandler);
 

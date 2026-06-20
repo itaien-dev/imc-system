@@ -18,6 +18,7 @@ import CreateWorkshopPage from './pages/CreateWorkshopPage';
 import WorkshopCardPage from './pages/WorkshopCardPage';
 import CloseWorkshopPage from './pages/CloseWorkshopPage';
 import ImportCsvPage from './pages/ImportCsvPage';
+import AccessLogPage from './pages/AccessLogPage';
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ export default function App() {
                   <Route path="/admin/workshops/:id" element={<WorkshopCardPage />} />
                   <Route path="/admin/workshops/:id/close" element={<CloseWorkshopPage />} />
                   <Route path="/admin/import" element={<ImportCsvPage />} />
+                  <Route path="/admin/access-log" element={<AccessLogPage />} />
                 </Route>
               </Route>
             </Route>
