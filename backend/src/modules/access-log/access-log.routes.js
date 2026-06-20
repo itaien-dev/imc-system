@@ -31,7 +31,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res, next) => {
     if (action) query = query.where('al.action', action);
 
     const countQuery = query.clone();
-    const [{ count }] = await countQuery.clearSelect().count('* as count');
+    const [{ count }] = await countQuery.clearSelect().clearOrder().count('* as count');
 
     const rows = await query.limit(pageSize).offset((page - 1) * pageSize);
     res.json({ rows, total: Number(count), page, pageSize });
