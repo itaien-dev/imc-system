@@ -40,8 +40,11 @@ async function list({ search, track, page = 1, pageSize = 20, sortBy = 'workshop
     countQuery = countQuery.where('track', track);
   }
 
+  const orderCols = [{ column: col, order: dir }];
+  if (col !== 'start_date') orderCols.push({ column: 'start_date', order: 'desc' });
+
   const rows = await query
-    .orderBy(col, dir)
+    .orderBy(orderCols)
     .limit(pageSize)
     .offset((page - 1) * pageSize);
 

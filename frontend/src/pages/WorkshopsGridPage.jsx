@@ -10,7 +10,7 @@ export default function WorkshopsGridPage() {
   const [track, setTrack] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [sortBy, setSortBy] = useState('workshop_number');
+  const [sortBy, setSortBy] = useState('cycle_number');
   const [sortDir, setSortDir] = useState('desc');
 
   const { data, isLoading } = useQuery({
