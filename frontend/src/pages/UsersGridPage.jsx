@@ -88,12 +88,11 @@ export default function UsersGridPage() {
                 <Th>דוא"ל</Th>
                 <Th>כתובת מגורים</Th>
                 <Th>מגדר</Th>
-                <Th>תאריך לידה</Th>
-                <SortTh col="student_workshop" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>סדנת סטודנט</SortTh>
-                <SortTh col="assist_count" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>כמות סדנאות</SortTh>
-                <SortTh col="last_workshop" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>סדנה אחרונה</SortTh>
-                <SortTh col="staff_count" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>סדנאות בתפקיד</SortTh>
                 <SortTh col="age" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>גיל</SortTh>
+                <SortTh col="student_workshop" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>סדנת סטודנט</SortTh>
+                <SortTh col="last_workshop" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>סדנה אחרונה</SortTh>
+                <SortTh col="assist_count" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>כמות סדנאות</SortTh>
+                <SortTh col="staff_count" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}>סדנאות בתפקיד</SortTh>
               </tr>
             </thead>
             <tbody>
@@ -113,12 +112,11 @@ export default function UsersGridPage() {
                   <Td>{u.email}</Td>
                   <Td>{u.address || '—'}</Td>
                   <Td>{u.gender === 'female' ? 'נקבה' : u.gender === 'male' ? 'זכר' : '—'}</Td>
-                  <Td>{u.birth_date ? new Date(u.birth_date).toLocaleDateString('he-IL') : '—'}</Td>
-                  <Td>{u.student_workshop ?? '—'}</Td>
-                  <Td>{u.assist_count}</Td>
-                  <Td>{u.last_workshop ?? '—'}</Td>
-                  <Td>{u.staff_count || '—'}</Td>
                   <Td>{u.age ?? '—'}</Td>
+                  <Td>{u.student_workshop ?? '—'}</Td>
+                  <Td>{u.last_workshop ?? '—'}</Td>
+                  <Td>{u.assist_count}</Td>
+                  <Td>{u.staff_count || '—'}</Td>
                 </tr>
               ))}
             </tbody>
