@@ -11,8 +11,11 @@ export default function GoogleCallbackPage() {
     const accessToken = searchParams.get('accessToken');
     const refreshToken = searchParams.get('refreshToken');
     if (accessToken && refreshToken) {
-      loginWithTokens(accessToken, refreshToken);
-      navigate('/profile', { replace: true });
+      loginWithTokens(accessToken, refreshToken).then(() => {
+        navigate('/profile', { replace: true });
+      }).catch(() => {
+        navigate('/login?error=google_failed', { replace: true });
+      });
     } else {
       navigate('/login?error=google_failed', { replace: true });
     }
