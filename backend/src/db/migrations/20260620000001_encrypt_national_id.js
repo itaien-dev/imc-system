@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 /**
  * Enables pgcrypto and converts users.national_id to encrypted storage.
  * Strategy: add a new bytea column (national_id_enc), migrate existing data,
@@ -6,6 +8,8 @@
  * passed as a query parameter — never hardcoded in the migration or DB.
  */
 exports.up = async function (knex) {
+  const key = process.env.DB_ENCRYPTION_KEY;
+  if (!key) throw new Error('DB_ENCRYPTION_KEY is not set — set it in .env or as an environment variable before running this migration');
   await knex.raw('CREATE EXTENSION IF NOT EXISTS pgcrypto');
 
   await knex.schema.alterTable('users', (table) => {
@@ -16,7 +20,7 @@ exports.up = async function (knex) {
     `UPDATE users
      SET national_id_enc = pgp_sym_encrypt(national_id, ?)
      WHERE national_id IS NOT NULL`,
-    [process.env.DB_ENCRYPTION_KEY]
+    [key]
   );
 
   await knex.schema.alterTable('users', (table) => {
@@ -27,6 +31,9 @@ exports.up = async function (knex) {
 };
 
 exports.down = async function (knex) {
+  const key = process.env.DB_ENCRYPTION_KEY;
+  if (!key) throw new Error('DB_ENCRYPTION_KEY is not set');
+
   await knex.schema.alterTable('users', (table) => {
     table.specificType('national_id_plain', 'varchar(9)');
   });
@@ -35,7 +42,7 @@ exports.down = async function (knex) {
     `UPDATE users
      SET national_id_plain = pgp_sym_decrypt(national_id, ?)
      WHERE national_id IS NOT NULL`,
-    [process.env.DB_ENCRYPTION_KEY]
+    [key]
   );
 
   await knex.schema.alterTable('users', (table) => {
