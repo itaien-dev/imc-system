@@ -206,26 +206,30 @@ function previewWorkshops(buffer) {
 async function commitWorkshops(rows) {
   let created = 0;
   let updated = 0;
-  for (const row of rows) {
-    if (row.action === 'skip') continue;
-    const existing = await db('workshops').where('workshop_number', row.workshop_number).first();
-    const payload = {
-      workshop_number:    row.workshop_number,
-      cycle_number:       row.cycle_number,
-      track:              row.track,
-      start_date:         row.start_date,
-      end_date:           row.end_date,
-      publish_start_date: row.publish_start_date,
-      publish_end_date:   row.publish_end_date,
-    };
-    if (existing) {
-      await db('workshops').where('id', existing.id).update(payload);
-      updated += 1;
-    } else {
-      await db('workshops').insert(payload);
-      created += 1;
+
+  await db.transaction(async (trx) => {
+    for (const row of rows) {
+      if (row.action === 'skip') continue;
+      const existing = await trx('workshops').where('workshop_number', row.workshop_number).first();
+      const payload = {
+        workshop_number:    row.workshop_number,
+        cycle_number:       row.cycle_number,
+        track:              row.track,
+        start_date:         row.start_date,
+        end_date:           row.end_date,
+        publish_start_date: row.publish_start_date,
+        publish_end_date:   row.publish_end_date,
+      };
+      if (existing) {
+        await trx('workshops').where('id', existing.id).update(payload);
+        updated += 1;
+      } else {
+        await trx('workshops').insert(payload);
+        created += 1;
+      }
     }
-  }
+  });
+
   return { created, updated };
 }
 

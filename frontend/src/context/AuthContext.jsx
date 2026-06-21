@@ -1,12 +1,20 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import * as authApi from '../api/auth';
 import { AuthContext } from './authContextValue';
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // On mount: restore user from localStorage and verify token is still valid
+  useEffect(() => {
     const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
-  });
+    const token = localStorage.getItem('accessToken');
+    if (stored && token) {
+      setUser(JSON.parse(stored));
+    }
+    setIsLoading(false);
+  }, []);
 
   const login = useCallback(async (email, password) => {
     const { accessToken, refreshToken, user: loggedInUser } = await authApi.login(email, password);
@@ -33,7 +41,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, loginWithTokens, logout, isAdmin: user?.role === 'admin' }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithTokens, logout, isAdmin: user?.role === 'admin' }}>
       {children}
     </AuthContext.Provider>
   );
