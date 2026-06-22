@@ -100,7 +100,7 @@ export default function ProfilePage() {
       </div>
 
       <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, padding: 20 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="grid-2">
           <Field label="שם" value={current.full_name} onChange={(v) => handleChange('full_name', v)} />
           <Field label="תעודת זהות" value={current.national_id} onChange={(v) => handleChange('national_id', v)} />
           <Field
@@ -111,7 +111,7 @@ export default function ProfilePage() {
           />
           <Field label="טלפון" value={current.phone} onChange={(v) => handleChange('phone', v)} />
           <Field label="דוא&quot;ל" value={current.email} onChange={(v) => handleChange('email', v)} />
-          <div style={{ gridColumn: '1 / -1' }}>
+          <div style={{ gridColumn: '1 / -1' }} className="grid-2-full">
             <Field label="כתובת מגורים" value={current.address} onChange={(v) => handleChange('address', v)} />
           </div>
           <div>
@@ -128,20 +128,11 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div
-          style={{
-            borderTop: '1px solid #e0e0e0',
-            marginTop: 16,
-            paddingTop: 12,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
+        <div className="profile-footer" style={{ borderTop: '1px solid #e0e0e0', marginTop: 16, paddingTop: 12 }}>
           <p style={{ fontSize: 12, color: '#999', margin: 0 }}>
             תאריך הוספה ותוקף חברות ניתנים לעדכון ע"י מנהל בלבד
           </p>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div className="profile-actions">
             {savedMessage && <span style={{ color: '#1e7e34', fontSize: 13 }}>{savedMessage}</span>}
             <button onClick={handleSave} disabled={mutation.isPending} style={{ fontWeight: 500 }}>
               שמירת שינויים
@@ -152,7 +143,7 @@ export default function ProfilePage() {
 
       <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, padding: 20, marginTop: 12 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>נתונים מחושבים</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, fontSize: 13 }}>
+        <div className="grid-5">
           <Stat label="גיל" value={user.age ?? '—'} />
           <Stat label="כמות סדנאות (אסיסט)" value={user.assist_count} />
           <Stat label="סדנת סטודנט" value={user.student_workshop ?? '—'} />
@@ -164,7 +155,7 @@ export default function ProfilePage() {
       <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, padding: 20, marginTop: 12 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>שינוי סיסמה</h3>
         <form onSubmit={handleChangePassword}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 12 }}>
+          <div className="grid-3" style={{ marginBottom: 12 }}>
             <div>
               <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>סיסמה נוכחית</label>
               <input type="password" value={pwForm.current} required
@@ -246,7 +237,7 @@ export default function ProfilePage() {
             ⏳ בקשת מחיקת החשבון שלך התקבלה ב-{new Date(user.deletion_requested_at).toLocaleDateString('he-IL')} וממתינה לאישור המנהל.
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="deletion-row">
             <div>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: '#555' }}>מחיקת חשבון</p>
               <p style={{ margin: '2px 0 0', fontSize: 12, color: '#999' }}>הבקשה תועבר למנהל המערכת לאישור. החשבון לא יימחק באופן מיידי.</p>
@@ -254,7 +245,7 @@ export default function ProfilePage() {
             <button
               onClick={handleRequestDeletion}
               disabled={deletionMutation.isPending}
-              style={{ color: '#c0392b', border: '1px solid #c0392b', background: '#fff', padding: '6px 14px', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}
+              style={{ color: '#c0392b', border: '1px solid #c0392b', background: '#fff', padding: '6px 14px', borderRadius: 4, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}
             >
               בקשת מחיקת חשבון
             </button>

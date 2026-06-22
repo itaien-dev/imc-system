@@ -8,6 +8,49 @@ body {
   color: #1a1a1a;
 }
 
+/* ── Responsive grid helpers ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-2-full { grid-column: 1 / -1; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; font-size: 13px; }
+
+/* ── Nav ── */
+.nav-links { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.nav-hamburger { display: none; background: none; border: none; font-size: 22px; padding: 4px 8px; cursor: pointer; }
+.nav-mobile-menu {
+  display: none; flex-direction: column; gap: 0;
+  position: absolute; top: 57px; right: 0; left: 0;
+  background: #fff; border-bottom: 1px solid #e0e0e0;
+  z-index: 100; padding: 8px 0;
+}
+.nav-mobile-menu.open { display: flex; }
+.nav-mobile-menu a, .nav-mobile-menu button {
+  padding: 12px 20px; border: none; border-radius: 0;
+  text-align: right; width: 100%; font-size: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* ── Profile page ── */
+.profile-footer { display: flex; justify-content: space-between; align-items: center; }
+.profile-actions { display: flex; gap: 10px; align-items: center; }
+.deletion-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+@media (max-width: 640px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+  .grid-5 { grid-template-columns: 1fr 1fr; }
+
+  .nav-links { display: none; }
+  .nav-hamburger { display: block; }
+
+  .profile-footer { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .profile-actions { width: 100%; justify-content: flex-end; }
+  .deletion-row { flex-direction: column; align-items: flex-start; }
+  .deletion-row button { width: 100%; }
+
+  main { padding: 16px 12px !important; }
+}
+
 button {
   cursor: pointer;
   padding: 8px 14px;
